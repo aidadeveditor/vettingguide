@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OneTouch Vetting — Guide de référence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Spline+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#13201a;
+    --paper:#f4f1e8;
+    --paper-2:#eae5d6;
+    --card:#fbfaf4;
+    --green:#1f6b4f;
+    --green-deep:#10422f;
+    --green-soft:#dfece4;
+    --amber:#c8841a;
+    --amber-soft:#f6ecd6;
+    --red:#b23a2e;
+    --red-soft:#f4ddd8;
+    --blue:#356a8a;
+    --blue-soft:#dde9ef;
+    --line:#d9d2c0;
+    --mut:#6b6655;
+    --shadow:0 1px 2px rgba(19,32,26,.06),0 8px 28px rgba(19,32,26,.07);
+    --sans:'Spline Sans',system-ui,sans-serif;
+    --disp:'Fraunces',Georgia,serif;
+    --mono:'JetBrains Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--sans);
+    background:var(--paper);
+    color:var(--ink);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(var(--paper-2) 0.6px,transparent 0.6px);
+    background-size:18px 18px;
+  }
+
+  /* ---------- Layout ---------- */
+  .wrap{display:grid;grid-template-columns:288px 1fr;max-width:1400px;margin:0 auto;min-height:100vh}
+
+  /* ---------- Sidebar ---------- */
+  aside{
+    position:sticky;top:0;height:100vh;overflow-y:auto;
+    background:var(--green-deep);
+    color:#e8efe9;padding:28px 22px;
+    border-right:1px solid rgba(0,0,0,.2);
+  }
+  aside::-webkit-scrollbar{width:8px}
+  aside::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:8px}
+  .brand{display:flex;align-items:center;gap:11px;margin-bottom:6px}
+  .brand .dot{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#3fae82,#1f6b4f);display:grid;place-items:center;font-family:var(--disp);font-weight:700;color:#fff;font-size:19px;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+  .brand h1{font-family:var(--disp);font-size:21px;font-weight:600;letter-spacing:-.4px;line-height:1.1}
+  .brand small{display:block;font-size:11px;color:#8fbfa6;font-weight:400;letter-spacing:.3px;margin-top:2px;font-family:var(--sans)}
+  .searchbox{margin:20px 0 22px;position:relative}
+  .searchbox input{
+    width:100%;padding:10px 12px 10px 34px;border-radius:9px;border:1px solid rgba(255,255,255,.14);
+    background:rgba(0,0,0,.22);color:#eef3ef;font-family:var(--sans);font-size:13.5px;outline:none;
+  }
+  .searchbox input::placeholder{color:#7fa993}
+  .searchbox input:focus{border-color:#4cba8b;background:rgba(0,0,0,.32)}
+  .searchbox svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:15px;height:15px;stroke:#7fa993}
+  nav .group{font-size:10.5px;text-transform:uppercase;letter-spacing:1.4px;color:#6fa389;margin:18px 0 7px;font-weight:600}
+  nav a{
+    display:block;color:#cfe0d6;text-decoration:none;font-size:13.5px;padding:7px 11px;border-radius:8px;
+    transition:.16s;border:1px solid transparent;margin-bottom:1px;
+  }
+  nav a:hover{background:rgba(255,255,255,.07);color:#fff}
+  nav a.active{background:#2f8a64;color:#fff;border-color:#46b387}
+  nav a .num{font-family:var(--mono);font-size:11px;color:#79b598;margin-right:7px}
+  nav a.active .num{color:#bfe9d4}
+  .side-foot{margin-top:26px;padding-top:18px;border-top:1px solid rgba(255,255,255,.12);font-size:11.5px;color:#83b39b;line-height:1.5}
+
+  /* ---------- Main ---------- */
+  main{padding:0;max-width:100%;overflow-x:hidden}
+  .hero{
+    padding:64px 60px 46px;position:relative;overflow:hidden;
+    background:linear-gradient(160deg,#16523b 0%,#1f6b4f 55%,#247a59 100%);
+    color:#eef5f0;
+  }
+  .hero::after{content:"";position:absolute;right:-90px;top:-90px;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.12),transparent 70%)}
+  .hero .kick{font-family:var(--mono);font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#9fd6bb;margin-bottom:14px}
+  .hero h2{font-family:var(--disp);font-size:46px;font-weight:600;line-height:1.05;letter-spacing:-1px;max-width:740px;margin-bottom:16px}
+  .hero p{font-size:16.5px;max-width:620px;color:#d4e6db}
+  .hero .meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:26px}
+  .hero .meta span{font-size:12.5px;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.18);padding:6px 13px;border-radius:30px;backdrop-filter:blur(4px)}
+
+  .content{padding:46px 60px 90px}
+  section{margin-bottom:62px;scroll-margin-top:20px}
+  .sec-head{display:flex;align-items:baseline;gap:14px;margin-bottom:8px;border-bottom:2px solid var(--ink);padding-bottom:12px}
+  .sec-head .idx{font-family:var(--mono);font-size:13px;color:var(--green);font-weight:600}
+  .sec-head h3{font-family:var(--disp);font-size:31px;font-weight:600;letter-spacing:-.5px}
+  .lede{font-size:16px;color:#43412f;margin:16px 0 24px;max-width:760px}
+
+  p{margin-bottom:13px}
+  .content a{color:var(--green);font-weight:500}
+
+  /* cards */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:26px 28px;box-shadow:var(--shadow);margin-bottom:18px}
+  .card h4{font-family:var(--disp);font-size:20px;font-weight:600;margin-bottom:10px}
+  .card h5{font-size:14.5px;font-weight:600;margin:16px 0 6px;color:var(--green-deep)}
+
+  /* step flow */
+  .steps{counter-reset:s;margin:14px 0 4px}
+  .step{position:relative;padding:0 0 18px 50px;border-left:2px solid var(--green-soft);margin-left:14px}
+  .step:last-child{border-left-color:transparent}
+  .step::before{counter-increment:s;content:counter(s);position:absolute;left:-15px;top:-2px;width:30px;height:30px;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;font-family:var(--mono);font-size:13px;font-weight:600;box-shadow:0 3px 8px rgba(31,107,79,.3)}
+  .step b{display:block;font-size:14.5px;margin-bottom:2px}
+  .step span{font-size:14px;color:var(--mut)}
+
+  /* pills / tags */
+  .pill{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:6px;white-space:nowrap}
+  .pill.reject{background:var(--red-soft);color:var(--red)}
+  .pill.follow{background:var(--amber-soft);color:var(--amber)}
+  .pill.ir{background:var(--blue-soft);color:var(--blue)}
+  .pill.ok{background:var(--green-soft);color:var(--green)}
+
+  /* callouts */
+  .note{border-radius:11px;padding:15px 18px 15px 46px;position:relative;font-size:14.5px;margin:16px 0}
+  .note::before{position:absolute;left:16px;top:15px;font-size:17px}
+  .note.tip{background:var(--green-soft);border:1px solid #bcd9c8}
+  .note.tip::before{content:"✓"}
+  .note.warn{background:var(--amber-soft);border:1px solid #e9d4a3}
+  .note.warn::before{content:"⚠"}
+  .note.stop{background:var(--red-soft);border:1px solid #e3b6ad}
+  .note.stop::before{content:"✕"}
+  .note b{font-weight:600}
+
+  /* tables */
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14px;background:var(--card);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+  th{background:var(--green-deep);color:#eaf2ec;text-align:left;padding:11px 15px;font-size:12.5px;letter-spacing:.4px;font-weight:600}
+  td{padding:11px 15px;border-top:1px solid var(--line);vertical-align:top}
+  tr:nth-child(even) td{background:rgba(0,0,0,.015)}
+
+  /* check grid */
+  .check-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:18px 0}
+  .check-tile{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:18px 20px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .check-tile .cnum{font-family:var(--disp);font-size:34px;font-weight:700;color:var(--green-soft);position:absolute;right:14px;top:6px;line-height:1}
+  .check-tile b{display:block;font-size:15.5px;margin-bottom:4px;position:relative}
+  .check-tile p{font-size:13.5px;color:var(--mut);margin:0;position:relative}
+  .check-tile .scope{font-family:var(--mono);font-size:10.5px;color:var(--amber);text-transform:uppercase;letter-spacing:.6px;margin-top:8px;display:inline-block}
+
+  /* scenario box */
+  .scenario{background:linear-gradient(135deg,#16523b,#1f6b4f);color:#eef5f0;border-radius:14px;padding:24px 28px;margin:20px 0}
+  .scenario .lab{font-family:var(--mono);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#9fd6bb;margin-bottom:8px}
+  .scenario p{margin-bottom:0;color:#e3efe7}
+
+  /* quiz */
+  details.quiz{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px 20px;margin:12px 0;box-shadow:var(--shadow)}
+  details.quiz summary{cursor:pointer;padding:14px 0;font-weight:600;font-size:15px;list-style:none;display:flex;align-items:center;gap:10px}
+  details.quiz summary::-webkit-details-marker{display:none}
+  details.quiz summary::before{content:"?";flex:none;width:24px;height:24px;border-radius:50%;background:var(--blue-soft);color:var(--blue);display:grid;place-items:center;font-family:var(--mono);font-weight:600;font-size:13px}
+  details.quiz[open] summary::before{content:"✓";background:var(--green-soft);color:var(--green)}
+  details.quiz .ans{padding:4px 0 16px 34px;font-size:14.5px;color:#43412f}
+  details.quiz .ans .correct{font-weight:600;color:var(--green-deep)}
+
+  /* timeline reflexes */
+  .reflex{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:16px 0}
+  .reflex .chip{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:12px 16px;box-shadow:var(--shadow);flex:1;min-width:150px;text-align:center}
+  .reflex .chip .t{font-family:var(--disp);font-size:24px;font-weight:700;color:var(--green)}
+  .reflex .chip .l{font-size:12.5px;color:var(--mut)}
+  .reflex .arrow{color:var(--green);font-size:22px}
+
+  .key-link{display:inline-flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:9px 14px;font-size:13.5px;font-weight:500;text-decoration:none;color:var(--ink)!important;box-shadow:var(--shadow);transition:.15s;margin:4px 6px 4px 0}
+  .key-link:hover{border-color:var(--green);transform:translateY(-1px)}
+  .key-link .ic{color:var(--green)}
+
+  .no-result{display:none;text-align:center;padding:40px;color:var(--mut);font-style:italic}
+
+  footer{padding:30px 60px;border-top:1px solid var(--line);color:var(--mut);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+
+  .badge-go{display:inline-block;background:var(--amber-soft);border:1px solid #e9d4a3;color:#8a5a10;font-weight:600;font-size:13px;padding:8px 14px;border-radius:8px;font-family:var(--mono)}
+
+  /* mobile */
+  .menu-btn{display:none}
+  @media(max-width:900px){
+    .wrap{grid-template-columns:1fr}
+    aside{position:fixed;left:0;top:0;z-index:50;width:280px;transform:translateX(-100%);transition:.25s}
+    aside.open{transform:translateX(0)}
+    .menu-btn{display:grid;place-items:center;position:fixed;top:14px;left:14px;z-index:60;width:46px;height:46px;border-radius:12px;background:var(--green-deep);color:#fff;border:none;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+    .hero{padding:80px 26px 40px}
+    .hero h2{font-size:33px}
+    .content{padding:34px 26px 70px}
+    .sec-head h3{font-size:25px}
+    footer{padding:24px 26px}
+  }
+</style>
+</head>
+<body>
+
+<button class="menu-btn" id="menuBtn" aria-label="menu">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+</button>
+
+<div class="wrap">
+  <!-- SIDEBAR -->
+  <aside id="sidebar">
+    <div class="brand">
+      <div class="dot">1T</div>
+      <div>
+        <h1>OneTouch Vetting</h1>
+        <small>Guide agent · Local · Metro · Goods INTL</small>
+      </div>
+    </div>
+
+    <div class="searchbox">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="search" type="text" placeholder="Rechercher (tag, check, règle…)">
+    </div>
+
+    <nav id="nav">
+      <div class="group">Démarrer</div>
+      <a href="#start" class="active"><span class="num">00</span>L'essentiel en 60s</a>
+      <a href="#why"><span class="num">01</span>Ce qui change</a>
+      <a href="#mindset"><span class="num">02</span>L'état d'esprit</a>
+      <div class="group">Les 5 checks</div>
+      <a href="#checks"><span class="num">03</span>Vue d'ensemble</a>
+      <a href="#dac7"><span class="num">3·1</span>DAC7 / DSA</a>
+      <a href="#pricing"><span class="num">3·2</span>Pricing</a>
+      <a href="#licensing"><span class="num">3·3</span>Licensing</a>
+      <a href="#pds"><span class="num">3·4</span>PDS Eligibility</a>
+      <a href="#website"><span class="num">3·5</span>Website</a>
+      <a href="#walkthrough"><span class="num">3·6</span>Les 5 checks sur 1 deal</a>
+      <div class="group">Agir</div>
+      <a href="#tags"><span class="num">04</span>Le langage des tags</a>
+      <a href="#retag"><span class="num">4·1</span>Corriger un tag</a>
+      <a href="#resources"><span class="num">05</span>Où tout se trouve</a>
+      <a href="#states"><span class="num">5·1</span>États d'un deal</a>
+      <div class="group">Spécialisé</div>
+      <a href="#goods"><span class="num">06</span>Goods INTL</a>
+      <a href="#appendix"><span class="num">07</span>Annexe par LoB</a>
+      <a href="#recap"><span class="num">08</span>Récap & règle d'or</a>
+    </nav>
+
+    <div class="side-foot">
+      Mise en service : <b>8 juin 2026</b><br>
+      Durée du module : ~30 min<br>
+      Périmètre : Local, Metro, Goods INTL
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main>
+    <div class="hero">
+      <div class="kick">Guide de référence · Groupon CO</div>
+      <h2>Devenez le filtre qui garde chaque deal prêt à lancer.</h2>
+      <p>Sous OneTouch, c'est vous qui faites passer le deal par le contrôle de conformité <em>avant</em> de le rédiger. Même deal, un transfert en moins. Ce guide vous donne les cinq checks, les bons tags, et où chercher quand vous hésitez.</p>
+      <div class="meta">
+        <span>⏱ Vetter en ~4 min une fois en réflexe</span>
+        <span>🔑 5 checks cœur</span>
+        <span>🏷 Le bon tag à chaque fois</span>
+        <span>🚩 Dans le doute, on signale</span>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- START -->
+      <section id="start">
+        <div class="sec-head"><span class="idx">00</span><h3>L'essentiel en 60 secondes</h3></div>
+        <p class="lede">Le vetting est une <b>porte, pas un contrôle qualité</b>. Son rôle : attraper les bloqueurs (licence expirée, DAC7 manquant, PDS interdit, prix qui ne correspond pas) <b>avant</b> que quiconque investisse du temps à écrire.</p>
+
+        <div class="reflex">
+          <div class="chip"><div class="t">VET</div><div class="l">Contrôles de conformité d'abord</div></div>
+          <div class="arrow">→</div>
+          <div class="chip"><div class="t">WRITE</div><div class="l">Rédaction une fois le deal validé</div></div>
+          <div class="arrow">→</div>
+          <div class="chip"><div class="t">SIGN OFF</div><div class="l">Images, revue finale, publication</div></div>
+        </div>
+
+        <div class="note tip"><b>La seule erreur, c'est le silence.</b> Vous prendrez des décisions dont vous n'êtes pas sûr — c'est normal et attendu. Signaler et escalader est <b>toujours</b> un choix sûr : le SOP, votre TL et le formulaire Asana sont là pour ça.</div>
+
+        <div class="card">
+          <h4>Les 5 checks cœur, en un coup d'œil</h4>
+          <table>
+            <tr><th>#</th><th>Check</th><th>Périmètre</th><th>Réflexe si problème</th></tr>
+            <tr><td>1</td><td>DAC7 / DSA</td><td>Nouveaux marchands EU·UK·CA·AU</td><td><span class="pill ir">IR</span> à l'Opportunity Owner</td></tr>
+            <tr><td>2</td><td>Pricing</td><td>Tous</td><td>Aligner SF sur le site + <span class="pill ir">IR</span> + <code>#valueadjusted</code></td></tr>
+            <tr><td>3</td><td>Licensing</td><td>Local (via LVG)</td><td>Tag licence selon le cas</td></tr>
+            <tr><td>4</td><td>PDS Eligibility</td><td>Metro uniquement</td><td><span class="pill reject">REJECT</span> ou <span class="pill follow">FOLLOW-UP</span></td></tr>
+            <tr><td>5</td><td>Website</td><td>Metro uniquement</td><td><span class="pill follow">FOLLOW-UP</span></td></tr>
+          </table>
+        </div>
+      </section>
+
+      <!-- WHY -->
+      <section id="why">
+        <div class="sec-head"><span class="idx">01</span><h3>Ce qui change pour vous</h3></div>
+        <p class="lede">À partir du <span class="badge-go">8 JUIN 2026</span>, vous vetterez les deals avant de les écrire. C'est une porte de plus, ajoutée à un flux que vous maîtrisez déjà de bout en bout.</p>
+
+        <div class="card">
+          <h5>Avant</h5>
+          <p>Un Vetter vérifie la conformité, vous transmet le deal, vous écrivez, éditez et publiez.</p>
+          <h5>Sous OneTouch</h5>
+          <p>Ce transfert disparaît — c'est vous qui passez le deal par la porte de vetting avant de commencer à écrire. Même deal, un saut en moins.</p>
+        </div>
+
+        <div class="card">
+          <h4>Ce que ça vous rapporte</h4>
+          <table>
+            <tr><th>Bénéfice</th><th>Concrètement</th></tr>
+            <tr><td>Moins de HOLD</td><td>Moins de blocages qui traversent plusieurs équipes.</td></tr>
+            <tr><td>Propriété complète</td><td>Vous gérez le deal de A à Z — fini d'hériter de la décision d'un autre.</td></tr>
+            <tr><td>Meilleure expérience marchand</td><td>Une seule voix Groupon, pas de messages contradictoires entre équipes.</td></tr>
+            <tr><td>Chemin de lancement clair</td><td>Le marchand sait quoi corriger, en une fois — moins de cycles rejet/resoumission.</td></tr>
+          </table>
+        </div>
+      </section>
+
+      <!-- MINDSET -->
+      <section id="mindset">
+        <div class="sec-head"><span class="idx">02</span><h3>L'état d'esprit du vetter</h3></div>
+        <p class="lede">Vérifier la licence d'un marchand <b>tôt</b> évite le travail gaspillé. Imaginez 25 minutes passées à rédiger un deal de salon de coiffure — images, titre, mentions légales — puis vous découvrez que la licence est expirée. 25 minutes envolées.</p>
+
+        <div class="note warn"><b>La racine du problème :</b> le vetting et la rédaction se sont faits dans le mauvais ordre. Le travail d'écriture a été bâti sur quelque chose qui n'avait pas été vérifié.</div>
+
+        <p>Le vetting est une <b>porte</b>, pas un contrôle qualité. Il attrape les show-stoppers <em>avant</em> la rédaction — pour que votre travail d'écriture ne repose jamais sur un deal qui ne peut pas être lancé.</p>
+
+        <div class="note tip"><b>Cas limite utile :</b> certains problèmes ressemblent à de la rédaction (ex. un paramètre type « Buyer Max ») mais relèvent en fait du vetting, car les paramètres de configuration doivent être vérifiés contre le contrat <b>avant</b> d'écrire. Dans le doute, traitez-le comme du vetting : vérifiez le contrat vous-même, ou faites un IR à Sales pour clarifier.</p></div>
+      </section>
+
+      <!-- CHECKS overview -->
+      <section id="checks">
+        <div class="sec-head"><span class="idx">03</span><h3>Les 5 checks cœur</h3></div>
+        <p class="lede">Cinq checks attrapent la plupart des deal-killers. Pour chacun : ce que vous regardez, la règle, et quand agir.</p>
+        <div class="check-grid">
+          <div class="check-tile"><span class="cnum">1</span><b>DAC7 / DSA</b><p>Le marchand peut-il légalement vendre ?</p><span class="scope">Nouveaux marchands EU·UK·CA·AU</span></div>
+          <div class="check-tile"><span class="cnum">2</span><b>Pricing</b><p>La valeur SF correspond-elle au site ?</p><span class="scope">Tous les deals</span></div>
+          <div class="check-tile"><span class="cnum">3</span><b>Licensing</b><p>Le PDS exige-t-il une licence ?</p><span class="scope">Local · via LVG</span></div>
+          <div class="check-tile"><span class="cnum">4</span><b>PDS Eligibility</b><p>Le deal peut-il tourner sur Metro ?</p><span class="scope">Metro uniquement</span></div>
+          <div class="check-tile"><span class="cnum">5</span><b>Website</b><p>Le site marche-t-il et colle-t-il au deal ?</p><span class="scope">Metro uniquement</span></div>
+        </div>
+      </section>
+
+      <!-- DAC7 -->
+      <section id="dac7">
+        <div class="sec-head"><span class="idx">3·1</span><h3>Check 1 — DAC7 / DSA</h3></div>
+        <div class="scenario"><div class="lab">Scénario</div><p>Une nouvelle soumission arrive : restaurant italien, nouveau compte sur la plateforme EU.</p></div>
+        <p><b>DAC7</b> est une directive EU obligeant les marketplaces à collecter les infos fiscales des vendeurs. <b>DSA</b> (Digital Services Act) couvre les obligations d'information consommateur. Ensemble, c'est le socle légal pour les nouveaux marchands. Si le champ n'est pas bon, on ne peut pas lancer.</p>
+
+        <div class="note warn"><b>Deux pièges classiques.</b> 1) DAC7/DSA s'applique <b>quelle que soit la catégorie</b> — c'est lié à la localisation et au statut du compte, pas au type de deal. 2) On ne coche <b>jamais</b> la case « Self-Certified » à la place du marchand : c'est une auto-attestation que lui seul peut faire. Et on ne rejette pas — le marchand peut régler ça avec Sales : on fait un <span class="pill ir">IR</span>, on ne rejette pas.</div>
+
+        <div class="card">
+          <h4>La procédure, chaque nouveau marchand</h4>
+          <div class="steps">
+            <div class="step"><b>Ouvrir le bon enregistrement Salesforce</b><span>Le <b>Account</b> du marchand — pas l'Opportunity. DAC7 : EU, UK, Canada, Australie. DSA : EU Feature Countries hors UK.</span></div>
+            <div class="step"><b>Vérifier le champ « DAC7/DSA Info »</b><span>Le statut doit afficher « Submitted » ou « Verified ».</span></div>
+            <div class="step"><b>Valider la self-certification</b><span>Pour les EU Feature Countries, confirmer que la case « DSA/DAC7 Self-Certified » est cochée.</span></div>
+            <div class="step"><b>Agir si une info manque</b><span>Envoyer un IR à l'Opportunity Owner. Si le compte parent est déjà « Verified », le compte enfant peut être vetté en passant manuellement son statut à Verified.</span></div>
+          </div>
+        </div>
+
+        <details class="quiz"><summary>Le compte SF d'un nouveau marchand EU affiche DAC7/DSA Info : « Invalid ». Quelle action ?</summary>
+          <div class="ans"><span class="correct">→ IR à l'Opportunity Owner.</span> Le deal ne peut pas avancer tant que DAC7 n'est pas Submitted ou Verified. DAC7 est un socle légal pour les nouveaux marchands EU/UK/CA/AU. Le correctif est côté Sales : on IR, on ne « ship » pas, on ne coche pas la case, on ne rejette pas.</div>
+        </details>
+      </section>
+
+      <!-- PRICING -->
+      <section id="pricing">
+        <div class="sec-head"><span class="idx">3·2</span><h3>Check 2 — Pricing</h3></div>
+        <div class="scenario"><div class="lab">Scénario</div><p>Un nouveau deal massage local arrive. La <b>Unit Value</b> dans Salesforce ne correspond pas au prix publié sur le site du marchand.</p></div>
+        <p>Une Unit Value décalée soit <b>surévalue l'économie client</b> (risque légal / remboursement), soit <b>contredit ce que le marchand publie</b> (risque de confiance). Le rôle du vetter : attraper ça avant qu'un client le voie.</p>
+
+        <div class="card">
+          <h4>Votre check pricing, à chaque fois</h4>
+          <div class="steps">
+            <div class="step"><b>Vérifier le prix dans Salesforce</b><span>Ouvrir le deal et relever la Unit Value de chaque option.</span></div>
+            <div class="step"><b>Vérifier sur le site du marchand</b><span>Retrouver le même service ou la même offre.</span></div>
+            <div class="step"><b>Comparer</b><span>Unit Value SF vs prix publié sur le site.</span></div>
+            <div class="step"><b>Si ça correspond</b><span>Continuer à vetter le deal.</span></div>
+            <div class="step"><b>Si ça ne correspond pas</b><span>Aligner la valeur SF sur le site, puis : screenshot du prix → l'attacher à l'opportunity → IR à l'Account Owner → ajouter <code>#valueadjusted</code> aux Context Notes.</span></div>
+            <div class="step"><b>Si aucun prix sur le site</b><span>Chercher un document Proof of Pricing sur l'opportunity ou le compte.</span></div>
+          </div>
+        </div>
+
+        <div class="note warn"><b>Spécifique Metro :</b> après ajustement, vérifiez la remise contre le tableau des seuils. Si la remise reste dans la fourchette → continuer avec <code>#valueadjusted</code>. Si elle sort de la fourchette → ne PAS utiliser <code>#valueadjusted</code> ; faire un Follow-Up avec le tag <span class="pill follow">Pre-Discounted Value Doesn't Match Website</span>.</div>
+
+        <details class="quiz"><summary>Le site affiche €60, la Unit Value SF affiche €75. Vous ajustez SF à €60. Étape suivante ?</summary>
+          <div class="ans"><span class="correct">→ IR à l'Account Owner pour le changement de valeur + ajouter <code>#valueadjusted</code> aux Context Notes.</span> Sales doit savoir qu'on a ajusté, et le hashtag le signale pour l'audit en aval. Sans ces deux étapes, le changement est invisible pour le reste de l'équipe.</div>
+        </details>
+      </section>
+
+      <!-- LICENSING -->
+      <section id="licensing">
+        <div class="sec-head"><span class="idx">3·3</span><h3>Check 3 — Licensing</h3></div>
+        <div class="scenario"><div class="lab">Scénario</div><p>Vous vettez un deal Local — épilation laser, nouveau marchand, PDS standard. Le statut du PDS dans la <b>LVG</b> indique « LP ».</p></div>
+        <p>La <b>LVG (Legal Vetting Guidelines)</b> est votre source de vérité unique pour le licensing par PDS. C'est là que le service Legal dit quels PDS sont bannis, lesquels nécessitent vérification, et lesquels passent sans souci. Vous y reviendrez souvent.</p>
+
+        <div class="card">
+          <h4>Check licensing, selon le statut LVG</h4>
+          <table>
+            <tr><th>Statut dans la LVG</th><th>Ce que vous faites</th></tr>
+            <tr><td><b>Blank</b></td><td>Aucun check licence. On continue les autres checks.</td></tr>
+            <tr><td><b>LP</b> (Legal Parameters)</td><td>Lancer le License Check. <b>Pour les PDS Massage :</b> aussi Online Reviews Check + Location Check.</td></tr>
+            <tr><td><b>DNC / Ban</b> (Metro)</td><td>Rejeter avec le tag <span class="pill reject">DNC</span>.</td></tr>
+          </table>
+        </div>
+
+        <div class="note tip"><b>Cas particuliers Local :</b> pour les deals à plus de 3 emplacements, vous pouvez accepter une preuve de politique de qualification du personnel au lieu des licences individuelles. <b>Exception :</b> sports aériens et vols de loisir exigent <em>toujours</em> une licence.</div>
+        <div class="note warn"><b>Si un PDS n'est pas couvert</b> par le SOP ou la LVG : pas d'exigence explicite de licence → on peut vetter sans license check ; pas d'entrée dans les listes d'éligibilité → le PDS est éligible par défaut. Dans le doute, signalez le gap via le formulaire Asana — n'inventez pas de règle.</div>
+
+        <details class="quiz"><summary>La licence soumise par un marchand a expiré. Quel Invalid Data tag ?</summary>
+          <div class="ans"><span class="correct">→ « Provided Licensing has Expired ».</span> À ne pas confondre avec « Required Licensing is Missing » (= le marchand n'a téléversé aucune licence). La précision du tag, c'est ce qui rend clair le chemin du marchand.</div>
+        </details>
+      </section>
+
+      <!-- PDS -->
+      <section id="pds">
+        <div class="sec-head"><span class="idx">3·4</span><h3>Check 4 — PDS Eligibility <span style="font-size:14px;color:var(--amber);font-family:var(--mono)">(Metro only)</span></h3></div>
+        <div class="scenario"><div class="lab">Scénario</div><p>Un deal Metro arrive avec 2 options : Option 1 — Massage suédois 60 min ; Option 2 — Injection de Botox. Massage est éligible Metro. Les injectables, non.</p></div>
+        <p>Le flux Metro est conçu pour le self-service. <b>Si un deal peut être sauvé, on le sauve.</b> On ne rejette que si le deal entier ne peut pas tourner sur Metro — auquel cas on redirige le marchand vers un commercial Sales.</p>
+
+        <div class="card">
+          <h4>Deux cas, deux actions</h4>
+          <table>
+            <tr><th>Situation</th><th>Action</th></tr>
+            <tr><td>Certaines options éligibles, d'autres non</td><td><span class="pill follow">FOLLOW-UP</span> avec le tag « Deal Details ». Indiquer clairement quelle(s) option(s) retirer.</td></tr>
+            <tr><td>Le deal entier n'est pas éligible Metro</td><td><span class="pill reject">REJECT</span> avec « Not Self Service PDS ».</td></tr>
+          </table>
+        </div>
+
+        <div class="note stop"><b>Ordre critique.</b> Rejeter d'ABORD, mettre à jour le PDS ENSUITE. Si vous changez le PDS avant de rejeter, le marchand ne voit pas le bon message de rejet — il se retrouve perdu, soumettant comme PDS X et rejeté comme PDS Y.</div>
+
+        <details class="quiz"><summary>Les 3 options d'un deal Metro échouent toutes à l'éligibilité. Séquence ?</summary>
+          <div class="ans"><span class="correct">→ Rejeter avec « Not Self Service PDS » d'abord, PUIS mettre à jour le PDS.</span> L'ordre compte. Reject first donne au marchand un message clair et le redirige vers un commercial Sales.</div>
+        </details>
+      </section>
+
+      <!-- WEBSITE -->
+      <section id="website">
+        <div class="sec-head"><span class="idx">3·5</span><h3>Check 5 — Merchant website <span style="font-size:14px;color:var(--amber);font-family:var(--mono)">(Metro only)</span></h3></div>
+        <p class="lede">Check rapide, règle oui/non. Sur Metro : le site du marchand doit <b>fonctionner</b> ET son contenu doit être <b>pertinent</b> pour le deal. Les deals signés par un commercial (Rep-signed) viennent avec une validation Sales — pas de check site nécessaire.</p>
+
+        <div class="card">
+          <h4>Website check (Metro)</h4>
+          <div class="steps">
+            <div class="step"><b>Ouvrir le site marchand</b><span>Accéder à l'URL fournie dans le deal.</span></div>
+            <div class="step"><b>Le site marche-t-il ?</b><span>Il charge, pas de pages cassées ni d'erreurs.</span></div>
+            <div class="step"><b>Le contenu est-il pertinent ?</b><span>Pour le marchand ET pour le service/offre soumis.</span></div>
+            <div class="step"><b>Les deux passent → on vette.</b><span>L'un échoue → Follow-Up avec « Service(s) Not Listed on Merchant's Website ».</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- WALKTHROUGH -->
+      <section id="walkthrough">
+        <div class="sec-head"><span class="idx">3·6</span><h3>Les 5 checks sur un seul deal</h3></div>
+        <p class="lede">Voilà à quoi ressemble votre vrai flux — pas 5 exercices séparés, une seule lecture continue.</p>
+        <div class="scenario"><div class="lab">Le deal qui arrive</div><p>Nouveau marchand EU en Espagne. Studio de massage à Madrid. Soumis via Metro. Une option : « Massage Deep Tissue 60 min » à €45 (Unit Value SF €90, remise 50 %). Le site liste « Massage 60 min — €70 ».</p></div>
+
+        <div class="card">
+          <h4>La lecture en 5 checks</h4>
+          <table>
+            <tr><th>Check</th><th>Lecture</th><th>Résultat</th></tr>
+            <tr><td>DAC7/DSA</td><td>Niveau Account. Champ = « Verified »</td><td><span class="pill ok">PASSE</span></td></tr>
+            <tr><td>Pricing</td><td>Site €70 vs Unit Value SF €90 → <b>écart</b></td><td>Ajuster SF à €70, screenshot, attacher, IR Account Owner, <code>#valueadjusted</code></td></tr>
+            <tr><td>Licensing</td><td>LVG pour « Deep Tissue Massage » = LP → License Check + Online Reviews & Location (massage)</td><td><span class="pill ok">PASSE</span></td></tr>
+            <tr><td>PDS Eligibility</td><td>Massage est éligible Metro</td><td><span class="pill ok">PASSE</span></td></tr>
+            <tr><td>Website</td><td>Site charge, liste les massages, colle au deal</td><td><span class="pill ok">PASSE</span></td></tr>
+          </table>
+        </div>
+        <div class="note tip"><b>Temps total une fois en réflexe : ~4 minutes.</b> Quatre checks passent vite ; un seul — le pricing — a demandé un IR et un ajustement de valeur. C'est une session de vetting typique : vous attrapez le souci, vous corrigez, vous documentez, vous transmettez.</div>
+      </section>
+
+      <!-- TAGS -->
+      <section id="tags">
+        <div class="sec-head"><span class="idx">04</span><h3>Le langage des tags</h3></div>
+        <p class="lede">Tagger, c'est parler au marchand — et à votre futur vous. Le bon tag dit au marchand exactement quoi corriger, et dit au prochain agent ce qui a déjà été signalé.</p>
+
+        <div class="card">
+          <h4><span class="pill follow">FOLLOW-UP</span> Pre-Discounted Value Doesn't Match Website</h4>
+          <p>À utiliser quand le prix régulier dans SF est supérieur au prix régulier sur le site. L'ECW doit inclure <b>les deux prix</b> : le Regular Price saisi dans Salesforce et celui trouvé sur le site (ou le Proof of Pricing).</p>
+          <div class="note tip" style="margin-bottom:0"><b>Exemple de message :</b> « Nous voyons que le prix régulier sur votre site est de €80, alors que le prix régulier saisi dans le deal est de €120. Merci d'aligner le prix régulier du deal sur celui du site, ou de fournir un Proof of Pricing à jour justifiant le montant supérieur. »</div>
+        </div>
+
+        <div class="card">
+          <h4><span class="pill follow">FOLLOW-UP</span> Service(s) Not Listed on Merchant's Website <span style="font-size:12px;color:var(--amber)">(Metro)</span></h4>
+          <p>Quand le site ne liste pas les services inclus dans le deal. Message type : certaines options du deal Groupon ne sont pas disponibles sur le site ; merci de lister les services et prix sur le site, ou de fournir un Proof of Pricing valide.</p>
+        </div>
+
+        <div class="card">
+          <h4><span class="pill reject">REJECT</span> DNC</h4>
+          <p>Bannissement total décidé par Legal — le PDS est interdit sur tout le site, listé dans la LVG. Aucun chemin possible pour ce marchand sur ce PDS. Le rejet est définitif.</p>
+        </div>
+
+        <div class="card">
+          <h4><span class="pill reject">REJECT</span> Not Self Service PDS <span style="font-size:12px;color:var(--amber)">(Metro)</span></h4>
+          <p>Le PDS peut tourner comme deal non-Metro mais pas en self-service. <b>Ordre critique : REJECT d'abord, puis mettre à jour le PDS.</b> Le marchand est redirigé vers un commercial Sales pour la création d'un deal non-Metro.</p>
+        </div>
+      </section>
+
+      <!-- RETAG -->
+      <section id="retag">
+        <div class="sec-head"><span class="idx">4·1</span><h3>Corriger un tag sur un deal Metro</h3></div>
+        <div class="note warn"><b>La règle qui tombe à l'examen.</b> Changer un tag sur un deal Metro n'est pas une simple édition. Sans la procédure en 3 étapes, le marchand voit toujours l'<b>ancien</b> message de rejet — déroutant pour lui, coûteux pour nous.</div>
+
+        <div class="card">
+          <h4>La procédure en 3 étapes</h4>
+          <div class="steps">
+            <div class="step"><b>Passer le deal à « Rep Getting Info »</b><span>Changer le statut, puis enregistrer.</span></div>
+            <div class="step"><b>Repasser le deal à « Recommended »</b><span>Remettre le statut, puis enregistrer.</span></div>
+            <div class="step"><b>Mettre à jour le tag Invalid Data</b><span>Sélectionner le bon tag, écrire le message dans Editorial Communication/Warnings (ECW), enregistrer.</span></div>
+          </div>
+        </div>
+        <div class="note tip">À chaque passage d'un deal entre <b>A Sure Thing</b> et <b>Rejected</b>, envoyez un email via SF pour informer le marchand. En passant à A Sure Thing, retirez le tag Invalid Data de l'opportunity.</div>
+
+        <details class="quiz"><summary>Vous aviez tagué « Required Licensing is Missing ». En fait le souci est un value mismatch. Que faites-vous ?</summary>
+          <div class="ans"><span class="correct">→ Rep Getting Info → Save → Recommended → Save → changer le tag pour « Pre-Discounted Value Doesn't Match Website » + mettre à jour l'ECW avec les deux prix → Save.</span> C'est la seule manière pour que le nouveau message atteigne réellement le marchand. Sauter ces étapes laisse l'ancien message visible — ce qui est faux et érode la confiance.</div>
+        </details>
+      </section>
+
+      <!-- RESOURCES -->
+      <section id="resources">
+        <div class="sec-head"><span class="idx">05</span><h3>Où tout se trouve</h3></div>
+        <p class="lede">Vous n'avez pas à mémoriser le SOP. Vous devez savoir vous y retrouver. Voici la carte des 6 références à garder en favori.</p>
+
+        <div class="card">
+          <a class="key-link" href="https://docs.google.com/document/d/1J3GEOsquBkDAcekU2EGyPv1TSgDncIiroruamsS0J54/edit" target="_blank" rel="noopener"><span class="ic">📄</span> Global CO SOP — référence principale</a>
+          <a class="key-link" href="https://docs.google.com/spreadsheets/d/11IbgwvHOgd4QIVswXedz9_xO-IkadrwanbK8JHnLP9Q/edit?gid=592598819" target="_blank" rel="noopener"><span class="ic">⚖️</span> LVG — licensing par PDS (chaque deal Local)</a>
+          <a class="key-link" href="https://docs.google.com/spreadsheets/d/11IbgwvHOgd4QIVswXedz9_xO-IkadrwanbK8JHnLP9Q/edit?gid=840557053" target="_blank" rel="noopener"><span class="ic">✅</span> PDS Eligibility — ce qui tourne sur Metro</a>
+          <a class="key-link" href="https://docs.google.com/spreadsheets/d/1Ni1RMqpEWbh9Ks9_HJ1j88GcI6l0Uc_4-wMr6oN-6IE/edit?gid=0" target="_blank" rel="noopener"><span class="ic">📊</span> Discount thresholds — seuils Metro</a>
+          <a class="key-link" href="https://docs.google.com/spreadsheets/d/1lfpquJcedhwqPuKTQyZoxqKXAkPPLu8EggO-OmGfxso/edit?gid=356277394" target="_blank" rel="noopener"><span class="ic">📝</span> INTL Fine Print + Redemption — templates par pays</a>
+          <a class="key-link" href="https://form.asana.com/?k=GmuWV5FpobYMB5wSeehopw&d=8437193015852" target="_blank" rel="noopener"><span class="ic">🚩</span> Asana — signaler un gap du SOP</a>
+        </div>
+        <div class="note tip"><b>Sur les templates INTL :</b> copier-coller, ne pas réinventer. <b>Sur le formulaire Asana :</b> quand vous trouvez un gap dans le SOP lui-même (un PDS non couvert, une règle marché floue), ne bricolez pas un contournement par email — signalez-le pour que ce soit corrigé pour tout le monde.</div>
+      </section>
+
+      <!-- STATES -->
+      <section id="states">
+        <div class="sec-head"><span class="idx">5·1</span><h3>Les états d'un deal — la file où vous vivez</h3></div>
+        <div class="card">
+          <table>
+            <tr><th>État</th><th>Ce que ça veut dire</th></tr>
+            <tr><td><b>Recommended</b></td><td>Atterri dans la file de vetting. C'est là que votre travail commence.</td></tr>
+            <tr><td><b>Rep Getting Info</b></td><td>Vous avez renvoyé quelque chose à Sales (Follow-Up ou IR). Le deal attend leur retour.</td></tr>
+            <tr><td><b>HOLD</b></td><td>Régression depuis Recommended. Un souci a été attrapé après le vetting initial ; le deal revient vers Rep Getting Info en attendant le marchand.</td></tr>
+            <tr><td><b>A Sure Thing (AST)</b></td><td>Entièrement vetté, écrit, image validée. Prêt à publier.</td></tr>
+            <tr><td><b>Rejected</b></td><td>Deal fermé ; ne peut pas être lancé.</td></tr>
+          </table>
+        </div>
+        <div class="note tip"><b>HOLD est un signal, pas une punition.</b> Si vous en voyez un, c'est qu'une étape en aval du vetting a signalé quelque chose — que vous pouvez soit corriger, soit escalader.</div>
+      </section>
+
+      <!-- GOODS -->
+      <section id="goods">
+        <div class="sec-head"><span class="idx">06</span><h3>Goods INTL — vetting spécialisé</h3></div>
+        <p class="lede">Goods INTL ajoute son propre flux <b>par-dessus</b> les 5 checks cœur. Les grands écarts : vérification du tier de marque, flux d'approbation spécifique Apple, et une règle « refurbished » <b>opposée</b> à celle de NAM Gateway.</p>
+        <div class="note warn"><b>Périmètre.</b> Ce module couvre <b>Goods INTL</b>. Les deals <b>NAM Goods</b> passent par Gateway, un outil et un flux différents — ils restent à l'équipe de Murali et ne sont PAS couverts ici. Si on vous demande de vetter du NAM Goods → escaladez.</div>
+
+        <div class="scenario"><div class="lab">Scénario</div><p>Un deal Goods INTL arrive : AirPods Apple, vendeur basé au UK. Nouveau marchand, nouveau compte. Le vendeur n'est <b>pas</b> sur la liste Apple approuvée.</p></div>
+
+        <div class="card">
+          <h4>Check du tier de marque, chaque deal Goods INTL</h4>
+          <table>
+            <tr><th>Situation</th><th>Action</th></tr>
+            <tr><td>Non-marqué</td><td>Checks standards. Pas d'approbation tier nécessaire.</td></tr>
+            <tr><td>Marqué T2 / T3, ou vendeur exempté</td><td>Vetter le deal.</td></tr>
+            <tr><td>Marque <b>T1</b></td><td>Exige une approbation enregistrée par un approbateur autorisé <b>OU</b> un document de provenance attaché au deal.</td></tr>
+            <tr><td><b>Apple</b> (piste propre)</td><td>Vendeur sur la liste Apple → vetter. Pas sur la liste → <b>legal hold</b>, Sales obtient la provenance chaîne d'appro, Legal vérifie, le vendeur est ajouté, puis le deal avance.</td></tr>
+          </table>
+          <p style="margin-top:8px"><b>Vendeurs exemptés :</b> BVG Airflo, James Russell, E.com International (Home & Garden uniquement), UPGS, Van Meuwen.</p>
+        </div>
+
+        <div class="note stop"><b>AirPods lookalikes :</b> tout produit non-Apple stylisé pour ressembler à des AirPods → signaler à Legal pour contrefaçon (IP). Ne pas vetter comme « Apple ».</div>
+
+        <div class="card">
+          <h4>Refurbished — la règle inversée</h4>
+          <p>Si le <b>grade de reconditionnement (A / B / C) est MANQUANT</b>, vous ne rejetez PAS. Vous envoyez un <span class="pill ir">IR</span> à Sales pour qu'ils confirment le grade. Le deal reste en <b>Rep Getting Info</b> jusqu'à confirmation — le body copy devra mentionner le grade avant lancement.</p>
+          <div class="note warn" style="margin-bottom:0"><b>C'est l'OPPOSÉ de NAM Goods Gateway</b>, où grade manquant = rejet automatique. <b>INTL signale-et-met-en-attente ; Gateway bloque sec.</b></div>
+        </div>
+
+        <div class="card">
+          <h4>Quatre règles à connaître pour Goods INTL</h4>
+          <table>
+            <tr><th>Sujet</th><th>Règle</th></tr>
+            <tr><td>Prix marques T1 UK</td><td>Si la marque est sur la liste Comparable Brands ET T1, le Proof of Pricing doit venir d'un Reputable Retailer ou du site du fabricant. (Refurbished : le PV du vendeur suffit même en T1.)</td></tr>
+            <tr><td>Preuve d'expédition cross-border</td><td>Si le pays de facturation du marchand diffère du pays de feature du deal, une preuve d'expédition est requise (screenshot panier, T&Cs, lettre signée d'un directeur, ou SHPRFOK dans les notes Logistics). Même pays = pas de preuve.</td></tr>
+            <tr><td>Food / Cosmétique / Détergent</td><td>Checks additionnels (voir la QA check matrix). Comprimés et médicaments liquides ne sont pas « food » → pas de Food Doc. Les protein shakes SONT « food » → Food Doc requis.</td></tr>
+            <tr><td>Attributs MRT</td><td>À ignorer pour le vetting. Pas visibles par Sales avant approbation et non vérifiables de façon fiable. Ne pas faire d'IR sur un mismatch MRT.</td></tr>
+          </table>
+        </div>
+        <div class="note tip"><b>Goods INTL = les 5 checks cœur + le flux tier de marque + la règle refurbished-IR + les 4 références rapides.</b> La plupart des deals Goods INTL se vettent en moins de 7 min une fois le check tier devenu réflexe.</div>
+      </section>
+
+      <!-- APPENDIX -->
+      <section id="appendix">
+        <div class="sec-head"><span class="idx">07</span><h3>Annexe — notes par Line of Business</h3></div>
+        <p class="lede">Référence, pas évaluation. À consulter quand vous vettez hors Local/Metro. Les 5 checks cœur s'appliquent toujours — l'annexe ne signale que ce qui diffère.</p>
+
+        <div class="card">
+          <h4>National / Enterprise / Mid-Market</h4>
+          <p>DAC7 : identique (INTL hors UAE + Canada, nouveaux marchands seulement, au niveau Account). PDS Eligibility / Licensing : comme Local. Pricing : comme Local (Unit Value vs site). <b>Carve-out :</b> pour les deals multi-emplacements, on peut accepter une politique de qualification du personnel au lieu des licences individuelles — SAUF sports aériens et vols de loisir (licence toujours requise). <b>Scheduling :</b> les agents ne planifient PAS les deals National / Mid-Market — Sales s'en charge.</p>
+        </div>
+        <div class="card">
+          <h4>GrouponLive</h4>
+          <p>DAC7 : comme National. Licensing : la piste LP exige seulement un License Check — pas d'Online Reviews / Location. <b>Pricing plus souple :</b> si le prix n'est pas sur le site et que le PV ne respecte pas nos guidelines, pousser le deal SANS lever d'IR. <b>Scheduling :</b> NAM Non-DCT GLive → Sales planifie ; INTL → règles « A Sure Thing » standards.</p>
+        </div>
+        <div class="card">
+          <h4>Travel</h4>
+          <p>DAC7 : exemption AU — un voyage international sur la plateforme AU avec rédemption hors AU est exempté (marquer « Verified » et noter la raison dans RRDP Info Submitted by). <b>Pricing :</b> pas de check prix pour les deals Booking ; les deals Tour Operator sont validés via le doc de soumission attaché par Sales (IR si manquant ou si les caractéristiques ne collent pas). Deals Property : match prix contre le site requis (le prix Groupon ne peut pas être supérieur). <b>Scheduling :</b> NAM Travel → Sales ; INTL Voucher → A Sure Thing dès que les feature dates existent ; INTL Extranet → A Sure Thing puis planifier quand l'inventaire Booking = « Extranet Approved ».</p>
+        </div>
+        <div class="card">
+          <h4>UAE (transversal)</h4>
+          <p><b>MOH (Ministry of Health)</b> — deals médicaux/cosmétiques AE (Botox, fillers, dentaire, injectables, esthétique) : la licence publicitaire MOH est demandée par le <b>Site Editor</b>, pas le Vetter. Deals MOH UAE : ne PAS planifier manuellement (confirmer que c'est planifiable, laisser Sales planifier). <b>DAC7 :</b> UAE EXCLU du check DAC7/DSA. <b>Images :</b> même genre uniquement dans l'imagerie médicale ; pas de démonstration d'affection ; personne ne boit/touche d'alcool (sauf barmen/serveurs) ; peau visible limitée.</p>
+        </div>
+        <div class="note warn"><b>Pas dans ce cours :</b> NAM Goods (basé Gateway) — outil et flux fondamentalement différents (mécanique de soumission différente, règle refurbished inversée = reject vs IR, pas de gestion de permalink). Propriété de l'équipe Murali. Si on vous demande d'en vetter → escaladez.</div>
+        <div class="card">
+          <h4>Où escalader</h4>
+          <table>
+            <tr><th>Situation</th><th>Vers où</th></tr>
+            <tr><td>PDS / règle marché flou</td><td>Formulaire Asana SOP gap (voir Module 5)</td></tr>
+            <tr><td>Zone grise à risque légal (fraude suspectée, statut DAC7 ambigu)</td><td>Votre TL</td></tr>
+            <tr><td>Gap de process (non couvert par le SOP)</td><td>Formulaire Asana SOP gap</td></tr>
+          </table>
+        </div>
+      </section>
+
+      <!-- RECAP -->
+      <section id="recap">
+        <div class="sec-head"><span class="idx">08</span><h3>Récap & règle d'or</h3></div>
+        <p class="lede">Le vetting, ce n'est pas cocher des cases. C'est protéger la qualité de lancement, réduire le risque opérationnel, et offrir au marchand un chemin plus fluide vers la mise en ligne.</p>
+
+        <div class="check-grid">
+          <div class="check-tile"><b>1 · Vérifier avant d'écrire</b><p>Toujours les 5 checks cœur d'abord. Un deal qui échoue au vetting ne passe jamais en rédaction.</p></div>
+          <div class="check-tile"><b>2 · Tagger avec précision</b><p>Chaque Follow-Up / Reject / Invalid Data tag pilote la communication marchand. Bon tag, bon workflow, ECW clair.</p></div>
+          <div class="check-tile"><b>3 · Signaler, ne pas deviner</b><p>Dans le doute, on s'arrête et on escalade via le SOP, son TL ou le formulaire Asana. La confiance vient de décisions vérifiées, pas de suppositions.</p></div>
+        </div>
+
+        <div class="scenario">
+          <div class="lab">Trois choses avant de vous lancer</div>
+          <p style="margin-bottom:10px">• <b>Mettez en favori les références du Module 5</b> — SOP, LVG, PDS Eligibility, formulaire Asana sont les quatre que vous consulterez le plus.</p>
+          <p style="margin-bottom:10px">• <b>Vos 5 premiers deals en live : vettez en binôme.</b> N'y allez pas seul le jour 1. Le flux devient réflexe plus vite quand on raisonne à voix haute à deux.</p>
+          <p>• <b>Un point flou ou un deal bloqué ?</b> Pingez votre TL d'abord, puis le formulaire Asana si c'est une règle manquante. Pas de contournement par email.</p>
+        </div>
+
+        <div class="note tip" style="font-size:16px"><b>La règle d'or, qui mérite d'être répétée :</b> « Si tu ne te souviens pas de la règle, cherche-la. Si tu ne trouves pas la règle, signale-la. » La seule erreur, c'est le silence — signaler et escalader est toujours sûr.</div>
+      </section>
+
+      <div class="no-result" id="noResult">Aucune section ne correspond à votre recherche.</div>
+
+    </div>
+
+    <footer>
+      <span>OneTouch Vetting Fundamentals · Guide agent · Groupon CO</span>
+      <span>Mise en service 8 juin 2026 · Local · Metro · Goods INTL</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+  // active nav on scroll
+  const links=[...document.querySelectorAll('#nav a')];
+  const secs=links.map(a=>document.querySelector(a.getAttribute('href'))).filter(Boolean);
+  const obs=new IntersectionObserver(es=>{
+    es.forEach(e=>{
+      if(e.isIntersecting){
+        const id='#'+e.target.id;
+        links.forEach(l=>l.classList.toggle('active',l.getAttribute('href')===id));
+      }
+    });
+  },{rootMargin:'-25% 0px -65% 0px'});
+  secs.forEach(s=>obs.observe(s));
+
+  // mobile menu
+  const sb=document.getElementById('sidebar'),mb=document.getElementById('menuBtn');
+  mb.addEventListener('click',()=>sb.classList.toggle('open'));
+  links.forEach(l=>l.addEventListener('click',()=>sb.classList.remove('open')));
+
+  // search filter
+  const search=document.getElementById('search');
+  const allSecs=[...document.querySelectorAll('main section')];
+  const noRes=document.getElementById('noResult');
+  search.addEventListener('input',()=>{
+    const q=search.value.trim().toLowerCase();
+    let any=false;
+    allSecs.forEach(s=>{
+      const match=q===''||s.textContent.toLowerCase().includes(q);
+      s.style.display=match?'':'none';
+      if(match)any=true;
+    });
+    noRes.style.display=any?'none':'block';
+    // dim nav links whose section is hidden
+    links.forEach(l=>{
+      const t=document.querySelector(l.getAttribute('href'));
+      if(t)l.style.opacity=(t.style.display==='none')?'.35':'1';
+    });
+  });
+</script>
+</body>
+</html>
