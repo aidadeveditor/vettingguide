@@ -1,0 +1,87 @@
+quelles sont les étapes du vetting ?
+
+Dans le cadre du processus « OneTouch », l'étape de vetting (vérification) regroupe 5 contrôles de conformité principaux (les « 5 core checks ») à effectuer obligatoirement avant de commencer la rédaction, suivis d'un contrôle de fraude,,.
+
+**1. Vérification DAC7 / DSA**
+*   Vérifiez au niveau du compte Salesforce (et non de l'opportunité) si le champ « DAC7/DSA Info » indique « Submitted » ou « Verified ». 
+*   Pour les pays européens, assurez-vous que la case « DSA/DAC7 Self-Certified » est cochée. Si ces informations manquent, vous ne pouvez pas avancer et devez envoyer une IR (Information Request),.
+
+**2. Vérification des prix (Pricing)**
+*   Vérifiez que la valeur unitaire (Unit Value) des options dans Salesforce correspond au prix affiché sur le site Web du partenaire ou sur le document de preuve de prix (PV).
+*   En cas de différence, ajustez la valeur dans Salesforce, prenez une capture d'écran pour la joindre à l'opportunité, informez l'Account Owner via une IR, et ajoutez « #valueadjusted » dans le champ *Context Notes*,.
+
+**3. Vérification des licences (Licensing)**
+*   Recherchez le service (PDS) dans le document LVG (Legal Vetting Guidelines). 
+*   Si le statut est « Blank », aucune vérification n'est requise. S'il indique « LP », effectuez la vérification de la licence professionnelle (et, pour les massages, une vérification de l'emplacement et des avis en ligne). Pour les offres Metro, si le PDS indique « DNC / Ban », rejetez l'offre,,.
+
+**4. Éligibilité PDS (Uniquement pour Metro)**
+*   Vérifiez que le PDS et toutes les options de l'offre sont éligibles pour être publiés sur la plateforme Metro,.
+*   Si l'offre entière n'est pas éligible, rejetez-la avec la balise « Not Self Service PDS » (le rejet doit se faire avant de modifier le PDS). Si seules certaines options posent problème, demandez leur retrait via un suivi avec la balise « Deal Details »,.
+
+**5. Vérification du site Web du partenaire (Uniquement pour Metro)**
+*   Le site Web doit se charger et fonctionner correctement.
+*   Vous devez valider deux éléments : l'alignement des services (les services affichés correspondent à l'offre) et l'alignement de l'identité du partenaire (le nom ou l'adresse sur le site appartient raisonnablement au partenaire listé dans l'offre),.
+
+**6. Dépistage des fraudes par l'IA (Gemini)**
+*   Une fois tous les contrôles standards précédents terminés, exécutez le contrôle de fraude de l'IA (via Gemini) comme toute dernière étape du processus de vetting avant d'approuver l'offre. Ce contrôle n'automatise pas les rejets mais signale s'il y a des indicateurs de fraude justifiant une révision manuelle,,.
+
+*(Note : Pour les offres « Goods INTL », une vérification supplémentaire du niveau de la marque (Brand Tier Check) ou de l'autorisation du fournisseur (ex: Apple) vient s'ajouter à ces étapes,.)*
+
+Le dépistage des fraudes par l'IA (Gemini) est une couche de sécurité supplémentaire ajoutée au processus de vetting, conçue pour aider à identifier les partenaires présentant des signaux de légitimité suspects avant la mise en ligne d'une offre. 
+
+Voici les règles et les étapes strictes à suivre selon les directives :
+
+**1. Objectif et limites**
+Ce contrôle par l'IA ne remplace pas le vetting manuel et ne doit **jamais** être utilisé pour rejeter automatiquement une offre. Il sert uniquement à identifier les partenaires qui pourraient nécessiter une vérification manuelle approfondie de la part d'un Team Lead. 
+
+**2. Quand effectuer ce contrôle ?**
+Ce test doit être exécuté comme la toute dernière étape du processus de vetting, uniquement après avoir terminé tous les contrôles standards (examen du site Web, vérification des licences, révision du contenu et validation des prix).
+
+**3. Comment lancer le contrôle ?**
+*   Ouvrez Gemini dans l'AI Hub.
+*   Accédez directement au prompt de dépistage via ce lien : `https://open-webui.groupondev.com/?model=ai-merchant-fraud-screening-check`.
+*   Saisissez les données requises : le nom du partenaire (*Merchant name*), le site Web du partenaire (*Merchant website*), le pays du partenaire (*Merchant country*) et le titre de l'offre (*Deal title*).
+*   Lancez l'analyse.
+
+**4. Interprétation des résultats et actions**
+L'outil commencera toujours sa réponse par l'un des deux résultats suivants :
+
+*   **NO MAJOR FRAUD INDICATORS DETECTED** (Aucun indicateur majeur de fraude détecté) : Poursuivez le processus de vetting standard. Si tous les autres contrôles sont terminés, l'offre peut avancer normalement. (La plupart des offres devraient renvoyer ce résultat).
+*   **MANUAL REVIEW REQUIRED** (Révision manuelle requise) : **Ne rejetez pas l'offre**. Vous devez signaler l'offre pour une révision manuelle et l'escalader à votre Team Lead (TL) pour qu'il vérifie la légitimité du partenaire. Cette escalade n'intervient que lorsque l'IA identifie plusieurs signaux de risque forts, comme des entreprises fabriquées de toutes pièces ou des sites Web suspects.
+
+Voici les étapes détaillées du processus de *vetting* pour chaque Line of Business (LOB), telles que définies dans les procédures standards (SOP). Bien que les vérifications de base soient communes, chaque LOB possède ses propres spécificités :
+
+**1. Core Local / Metro**
+*   **DAC7 / DSA :** Vérification au niveau du compte pour les nouveaux partenaires (s'applique à l'UE, au Royaume-Uni, au Canada et à l'Australie). La case « DSA/DAC7 Self-Certified » doit être cochée pour l'UE.
+*   **Vérification du site Web du partenaire :** Pour Metro, le site doit fonctionner et les services/l'identité doivent correspondre. Pour les offres Rep-Signed (non-Metro), un site Web ou une page de réseaux sociaux fonctionnelle suffit.
+*   **Éligibilité PDS :** Uniquement pour Metro. Vérification que le PDS et les options peuvent être publiés en libre-service.
+*   **Vérification des licences :** Recherche dans les *Legal Vetting Guidelines* (LVG). Pour les offres locales comptant plus de 3 emplacements, une preuve de la politique interne du partenaire vérifiant les qualifications de son personnel peut remplacer les licences individuelles (sauf pour les sports aériens).
+*   **Vérification des prix :** Ajustement de l'Unit Value dans Salesforce pour qu'elle corresponde au site Web ou au document de preuve de prix (PV).
+*   **Dépistage des fraudes par l'IA (Gemini) :** Dernière étape avant l'approbation.
+
+**2. National / Enterprise / Mid-Market**
+*   **DAC7 / DSA :** Pour les nouveaux partenaires INTL (hors EAU) et au Canada.
+*   **Éligibilité PDS / Licences :** Même processus que pour Local. Les preuves de politique interne pour les qualifications du personnel sont également acceptées à la place des licences individuelles (sauf exceptions à haut risque comme les sports aériens).
+*   **Vérification des prix :** Vérification sur le site Web ou via un document PV. Si les prix diffèrent, l'Unit Value doit être ajustée et le représentant commercial informé via une Information Request (IR).
+
+**3. GrouponLive (Événements)**
+*   **DAC7 / DSA :** Pour les nouveaux partenaires INTL (hors EAU) et au Canada.
+*   **Éligibilité PDS / Licences :** Vérification standard selon le document LVG.
+*   **Vérification des prix (Règle assouplie) :** Vous devez toujours essayer de valider les prix. Cependant, si les prix ne figurent pas sur le site Web du partenaire ou si le document PV fourni ne répond pas aux directives, vous devez approuver l'offre sans envoyer d'IR.
+
+**4. Goods (Produits INTL)**
+*   **Vérifications initiales :** Contrôle DAC7/DSA, vérification de la présence de cristaux Swarovski, de tests Covid (rejet automatique via IR) et contrôle des produits interdits.
+*   **Vérification de la marque (Brand Tier) :**
+    *   Les marques de niveau T1 nécessitent l'approbation d'une liste stricte de responsables, ou un document de provenance valide.
+    *   Il existe un processus d'approbation spécifique pour **Apple** (vérification sur une liste d'exceptions ou escalade légale).
+*   **Contrôles de validation (QA) :** Des vérifications supplémentaires et documents spécifiques sont requis pour les produits alimentaires (Food Doc), les cosmétiques et les détergents.
+*   **Vérification des prix :** Des règles strictes s'appliquent selon la région (ex: au Royaume-Uni, les preuves de prix pour les marques T1 doivent provenir d'un détaillant réputé ou du fabricant). Pour les produits reconditionnés, le site Web du vendeur est acceptable.
+*   **Preuve d'expédition (Shipping Proof) :** Requise uniquement pour les expéditions transfrontalières (lorsque le pays de facturation diffère du pays de l'offre).
+
+**5. Travel (Voyages)**
+*   **DAC7 / DSA :** Les offres de voyage internationales sur la plateforme australienne avec une utilisation (redemption) en dehors de l'Australie sont exemptées. Vous devez marquer « Verified » et le justifier dans les notes.
+*   **Vérification des prix :**
+    *   **Booking (Réservation) :** Aucune vérification de prix n'est requise.
+    *   **Tour Operator :** La vérification se fait via le document de soumission Excel fourni par les ventes.
+    *   **Property (Hébergement) :** Les prix doivent correspondre au site Web et le prix Groupon ne doit jamais être plus élevé.
+*   **Localisation :** Pour les offres Tour Operator, inclure tous les emplacements suivis de leurs zones respectives. Pour les offres Property, l'emplacement correspond à l'adresse de l'hôtel.
