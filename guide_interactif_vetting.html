@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portail Interactif Vetting - OneTouch</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: Warm Neutrals & Teal Accents (Stone-50, Stone-800, Teal-700, Amber-600) -->
+    <!-- Application Structure Plan: The application is structured as a dynamic, interactive dashboard. The left panel serves as a functional navigation (LOB selector). The central panel acts as the main task-oriented view, displaying the standard 6-step vetting process dynamically adapted to the selected LOB. The right panel provides contextual analytical visualizations and specific LOB exceptions. This structure allows vetting agents to immediately isolate the precise procedures relevant to their current task without scrolling through irrelevant sections, thereby minimizing cognitive load and errors. -->
+    <!-- Visualization & Content Choices: 
+        1. Vetting Steps (Goal: Inform/Process) -> Interactive List (HTML/CSS/JS) -> User selects LOB, list updates to show active/inactive steps and specific rules. Justification: A checklist format is native to process execution. 
+        2. Process Composition (Goal: Analyze) -> Doughnut Chart (Chart.js) -> Updates based on LOB complexity. Justification: Visually reinforces the distribution of vetting effort (Legal vs Finance vs Security). NO SVG used. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            background-color: #fafaf9;
+            color: #292524;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 250px;
+            max-height: 300px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 280px;
+            }
+        }
+        .step-card {
+            transition: all 0.3s ease;
+        }
+        .step-inactive {
+            opacity: 0.5;
+            filter: grayscale(100%);
+        }
+        .lob-btn.active {
+            background-color: #0f766e;
+            color: white;
+            border-color: #0f766e;
+        }
+        
+        /* Assistant Chat Styles */
+        #chat-widget {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+        #chat-window {
+            width: 350px;
+            height: 500px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 15px;
+            border: 1px solid #e7e5e4;
+        }
+        #chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            background-color: #fafaf9;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .msg-bubble {
+            max-width: 85%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            line-height: 1.4;
+        }
+        .msg-user {
+            background-color: #0f766e;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+        .msg-ai {
+            background-color: white;
+            color: #292524;
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+            border: 1px solid #e7e5e4;
+        }
+        .typing-indicator {
+            display: inline-flex;
+            gap: 4px;
+            padding: 4px 8px;
+        }
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: #a8a29e;
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out both;
+        }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        /* Modal Styles */
+        #fraud-modal, #ir-modal {
+            display: none;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <header class="mb-8 border-b border-stone-200 pb-6">
+            <h1 class="text-3xl md:text-4xl font-bold text-stone-800 flex items-center gap-3">
+                <span class="text-teal-700">☑️</span> Hub de Vetting OneTouch
+            </h1>
+            <p class="text-stone-600 mt-2 text-lg">
+                Outil d'aide à la décision pour le processus de vérification des offres. Sélectionnez votre Ligne de Marché (LOB) pour adapter dynamiquement les contrôles de conformité.
+            </p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <nav class="lg:col-span-3 space-y-6">
+                <div>
+                    <h2 class="text-xl font-semibold mb-3 text-stone-800">1. Ligne de Marché</h2>
+                    <p class="text-sm text-stone-500 mb-4">Sélectionnez la catégorie de l'offre pour générer la procédure spécifique.</p>
+                    <div class="flex flex-col gap-2" id="lob-selector">
+                        <button data-lob="core" class="lob-btn active text-left px-4 py-3 rounded-lg border border-stone-300 hover:bg-stone-100 font-medium transition-colors">Core Local / Metro</button>
+                        <button data-lob="national" class="lob-btn text-left px-4 py-3 rounded-lg border border-stone-300 hover:bg-stone-100 font-medium transition-colors">National / Enterprise</button>
+                        <button data-lob="glive" class="lob-btn text-left px-4 py-3 rounded-lg border border-stone-300 hover:bg-stone-100 font-medium transition-colors">GrouponLive (Événements)</button>
+                        <button data-lob="goods" class="lob-btn text-left px-4 py-3 rounded-lg border border-stone-300 hover:bg-stone-100 font-medium transition-colors">Goods (Produits INTL)</button>
+                        <button data-lob="travel" class="lob-btn text-left px-4 py-3 rounded-lg border border-stone-300 hover:bg-stone-100 font-medium transition-colors">Travel (Voyages)</button>
+                    </div>
+                </div>
+            </nav>
+
+            <main class="lg:col-span-6 space-y-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-teal-800 mb-2">2. Les 6 Étapes du Vetting</h2>
+                    <p class="text-stone-600 mb-6">Ce panneau liste les contrôles obligatoires. Les étapes inactives pour la LOB sélectionnée sont grisées. Cliquez sur une étape pour en voir les détails.</p>
+                </div>
+
+                <div class="space-y-4" id="steps-container">
+                    
+                </div>
+            </main>
+
+            <aside class="lg:col-span-3 space-y-6">
+                <!-- Nouvel Outil IA -->
+                <div class="bg-gradient-to-br from-teal-50 to-stone-50 p-6 rounded-xl shadow-sm border border-teal-100 relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 text-6xl opacity-10">✨</div>
+                    <h3 class="text-lg font-bold text-teal-900 mb-2 border-b border-teal-200 pb-2 flex items-center gap-2"><span>✨</span> Outils IA</h3>
+                    <p class="text-xs text-stone-600 mb-4">Générez automatiquement vos demandes de correction (Information Requests) pour les commerciaux.</p>
+                    <button onclick="openIRModal()" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 shadow-sm">
+                        ✨ Rédiger une IR
+                    </button>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                    <h3 class="text-lg font-bold text-stone-800 mb-2 border-b border-stone-100 pb-2">Spécificités LOB</h3>
+                    <p class="text-sm text-stone-600 mb-4">Règles et exceptions additionnelles pour la catégorie en cours.</p>
+                    <ul id="lob-specifics" class="space-y-3 text-sm text-stone-700">
+                    </ul>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                    <h3 class="text-lg font-bold text-stone-800 mb-2 border-b border-stone-100 pb-2">Répartition des Contrôles</h3>
+                    <p class="text-xs text-stone-500 mb-4">Analyse de la charge de vérification pour cette LOB.</p>
+                    <div class="chart-container">
+                        <canvas id="vettingChart"></canvas>
+                    </div>
+                </div>
+            </aside>
+
+        </div>
+    </div>
+
+    <!-- Modal Générateur IR -->
+    <div id="ir-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-stone-200">
+            <div class="bg-teal-800 p-4 flex justify-between items-center">
+                <h3 class="text-white font-bold text-lg flex items-center gap-2"><span>✨</span> Générateur d'IR (Information Request)</h3>
+                <button onclick="closeIRModal()" class="text-teal-200 hover:text-white transition-colors">✕</button>
+            </div>
+            <div class="p-6">
+                <p class="text-sm text-stone-600 mb-4">L'IA va rédiger un e-mail clair et professionnel au commercial pour demander les corrections nécessaires.</p>
+                <form id="ir-form" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-stone-700 mb-1">Nom de l'offre (Deal Name)</label>
+                        <input type="text" id="ir-deal" required class="w-full px-3 py-2 border border-stone-300 rounded-lg focus:outline-none focus:border-teal-600 text-sm" placeholder="Ex: Massage Thaïlandais 1h">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-stone-700 mb-1">Motif du blocage</label>
+                        <select id="ir-reason" class="w-full px-3 py-2 border border-stone-300 rounded-lg focus:outline-none focus:border-teal-600 text-sm">
+                            <option value="Absence des informations DAC7/DSA">DAC7 / DSA Manquant</option>
+                            <option value="Écart de prix entre Salesforce et la preuve/le site">Incohérence de Prix (Pricing)</option>
+                            <option value="Licence professionnelle manquante ou invalide">Licence Manquante</option>
+                            <option value="PDS non éligible pour Metro">PDS Inéligible</option>
+                            <option value="Site web en panne ou informations non concordantes">Problème Site Web</option>
+                            <option value="Autre (préciser dans le contexte)">Autre</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-stone-700 mb-1">Contexte supplémentaire (Optionnel)</label>
+                        <textarea id="ir-context" rows="2" class="w-full px-3 py-2 border border-stone-300 rounded-lg focus:outline-none focus:border-teal-600 text-sm" placeholder="Ex: Le prix sur le site est de 45€ au lieu de 50€..."></textarea>
+                    </div>
+                    <button type="submit" id="ir-submit" class="w-full bg-teal-700 hover:bg-teal-800 text-white font-medium py-2.5 rounded-lg transition-colors flex justify-center items-center gap-2">
+                        ✨ Générer le message
+                    </button>
+                </form>
+
+                <div id="ir-result-container" class="mt-6 hidden flex flex-col gap-2">
+                    <div class="flex justify-between items-end">
+                        <label class="block text-xs font-semibold text-stone-700">Message Généré :</label>
+                        <button onclick="copyIRText()" class="text-xs bg-stone-100 hover:bg-stone-200 text-stone-700 px-2 py-1 rounded transition-colors flex items-center gap-1 border border-stone-200">
+                            📋 Copier
+                        </button>
+                    </div>
+                    <textarea id="ir-result" rows="6" readonly class="w-full px-3 py-2 border border-stone-300 bg-stone-50 rounded-lg focus:outline-none text-sm text-stone-700 resize-none"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Widget IA -->
+    <div id="chat-widget">
+        <div id="chat-window">
+            <div class="bg-teal-800 p-4 text-white flex justify-between items-center shadow-md z-10">
+                <div class="font-bold flex items-center gap-2"><span>💬</span> Assistant Vetting IA</div>
+                <button onclick="toggleChat()" class="text-teal-200 hover:text-white">✕</button>
+            </div>
+            <div id="chat-messages">
+                <div class="msg-bubble msg-ai">Bonjour ! Je suis l'assistant IA de l'équipe Vetting. Je connais toutes les règles (DAC7, Licences, exceptions par LOB). Comment puis-je vous aider avec une offre aujourd'hui ?</div>
+            </div>
+            <form id="chat-form" class="p-3 bg-white border-t border-stone-200 flex gap-2">
+                <input type="text" id="chat-input" placeholder="Posez une question sur les process..." autocomplete="off" class="flex-1 px-3 py-2 border border-stone-300 rounded-lg text-sm focus:outline-none focus:border-teal-600">
+                <button type="submit" class="bg-teal-700 hover:bg-teal-800 text-white px-3 py-2 rounded-lg transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995L.643 7.184a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11ZM6.636 10.07l2.761 4.338L14.13 2.576 6.636 10.07Zm6.787-8.201L1.591 6.602l4.339 2.76 7.494-7.493Z"/></svg>
+                </button>
+            </form>
+        </div>
+        <button onclick="toggleChat()" class="bg-stone-800 hover:bg-stone-900 text-white w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-transform hover:scale-105">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path d="M8 15c4.418 0 8-3.134 8-7s-3.582-7-8-7-8 3.134-8 7c0 1.76.743 3.37 1.97 4.6-.097 1.016-.417 2.13-.771 2.966-.079.186.074.394.273.362 2.256-.37 3.597-.938 4.18-1.234A9.06 9.06 0 0 0 8 15z"/></svg>
+        </button>
+    </div>
+
+    <script>
+        const vettingSteps = [
+            {
+                id: 1,
+                title: "Vérification DAC7 / DSA",
+                icon: "⚖️",
+                category: "Légal",
+                content: "Vérifier le champ « DAC7/DSA Info » au niveau du compte Salesforce (doit indiquer Submitted ou Verified). Pour l'Europe, la case « DSA/DAC7 Self-Certified » doit être cochée. Si manquant : bloquer et envoyer une IR."
+            },
+            {
+                id: 2,
+                title: "Vérification des prix (Pricing)",
+                icon: "💰",
+                category: "Financier",
+                content: "Comparer l'Unit Value dans Salesforce avec le prix affiché sur le site Web du partenaire ou sur le document de preuve de prix (PV). Ajuster si besoin, ajouter capture d'écran, informer via IR, et ajouter la balise #valueadjusted."
+            },
+            {
+                id: 3,
+                title: "Vérification des licences",
+                icon: "📜",
+                category: "Légal",
+                content: "Chercher le service (PDS) dans le document Legal Vetting Guidelines (LVG). Blank = Aucune vérification. LP = Vérifier licence pro (+ emplacement/avis pour massages). DNC/Ban = Rejeter."
+            },
+            {
+                id: 4,
+                title: "Éligibilité PDS",
+                icon: "✅",
+                category: "Qualité",
+                content: "Exclusif à Metro. Vérifier que le PDS et les options peuvent être publiés en libre-service. Rejeter avec balise « Not Self Service PDS » si inéligible."
+            },
+            {
+                id: 5,
+                title: "Vérification du site Web",
+                icon: "🌐",
+                category: "Qualité",
+                content: "Exclusif à Metro (et partiel autres). S'assurer que le site fonctionne, que les services correspondent à l'offre et que l'identité est alignée. Rep-Signed : page sociale acceptée."
+            },
+            {
+                id: 6,
+                title: "Dépistage des fraudes (Gemini IA)",
+                icon: "🤖",
+                category: "Sécurité",
+                content: `Étape ultime après les 5 autres. Évaluez le risque de fraude du partenaire avant approbation.<br><button onclick="openFraudModal()" class="mt-3 bg-stone-800 text-white px-4 py-2 rounded-lg text-sm hover:bg-teal-700 transition-colors flex items-center gap-2 shadow-sm"><span>⚡</span> Lancer l'Analyse IA Intégrée</button>`
+            }
+        ];
+
+        const lobData = {
+            core: {
+                activeSteps: [1, 2, 3, 4, 5, 6],
+                chartData: [2, 1, 2, 1],
+                specifics: [
+                    "📍 <b>Licences :</b> Pour >3 emplacements, la politique interne remplace les licences individuelles (sauf sports aériens).",
+                    "📍 <b>Metro vs Non-Metro :</b> Pour Rep-Signed (non-Metro), une simple page réseau social fonctionnelle suffit pour l'étape 5."
+                ]
+            },
+            national: {
+                activeSteps: [1, 2, 3, 6],
+                chartData: [2, 1, 0, 1],
+                specifics: [
+                    "🌍 <b>DAC7 / DSA :</b> S'applique aux nouveaux partenaires INTL (hors EAU) et Canada.",
+                    "📍 <b>Licences :</b> Tolérance de politique interne acceptée similaire à Core Local.",
+                    "💸 <b>Prix :</b> Obligation d'ajuster l'Unit Value et de notifier le commercial via IR en cas d'écart."
+                ]
+            },
+            glive: {
+                activeSteps: [1, 2, 3, 6],
+                chartData: [2, 0.5, 0, 1],
+                specifics: [
+                    "🌍 <b>DAC7 / DSA :</b> S'applique aux nouveaux partenaires INTL (hors EAU) et Canada.",
+                    "🎫 <b>Licences :</b> Vérification standard selon le document LVG.",
+                    "⚠️ <b>Prix (Règle assouplie) :</b> Si les prix sont introuvables ou si le PV n'est pas conforme, approuver l'offre <b>sans envoyer d'IR</b>."
+                ]
+            },
+            goods: {
+                activeSteps: [1, 2, 6],
+                chartData: [1, 2, 2, 1],
+                specifics: [
+                    "🚫 <b>Interdits :</b> Rejet auto pour tests Covid, cristaux Swarovski, etc.",
+                    "⭐ <b>Marque (Brand Tier) :</b> Niveau T1 nécessite une approbation stricte ou preuve de provenance. Processus ultra-spécifique pour Apple.",
+                    "📊 <b>Prix :</b> Règles strictes. Au R-U, preuves T1 via détaillant réputé/fabricant. Reconditionné : site vendeur OK.",
+                    "🧪 <b>Qualité (QA) :</b> Docs spécifiques pour alimentaire, cosmétiques, détergents.",
+                    "📦 <b>Expédition :</b> Preuve requise si expédition transfrontalière."
+                ]
+            },
+            travel: {
+                activeSteps: [1, 2, 6],
+                chartData: [1, 2, 1, 1],
+                specifics: [
+                    "✈️ <b>DAC7 / DSA :</b> Exemption pour offres INTL sur plateforme AU (utilisation hors AU). Marquer « Verified » avec justification.",
+                    "🛏️ <b>Prix (Booking) :</b> Aucune vérification requise.",
+                    "🚌 <b>Prix (Tour Operator) :</b> Vérification via document Excel des ventes.",
+                    "🏨 <b>Prix (Property) :</b> Le prix Groupon ne doit jamais être supérieur au site Web.",
+                    "🗺️ <b>Localisation :</b> Tour Operator (inclure zones). Property (adresse exacte de l'hôtel)."
+                ]
+            }
+        };
+
+        let currentLob = 'core';
+        let myChart = null;
+
+        function initApp() {
+            renderSteps();
+            renderSpecifics();
+            initChart();
+            
+            document.querySelectorAll('.lob-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.lob-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    currentLob = e.target.getAttribute('data-lob');
+                    updateDashboard();
+                });
+            });
+        }
+
+        function renderSteps() {
+            const container = document.getElementById('steps-container');
+            container.innerHTML = '';
+            
+            const activeSteps = lobData[currentLob].activeSteps;
+
+            vettingSteps.forEach(step => {
+                const isActive = activeSteps.includes(step.id);
+                const stepClasses = isActive 
+                    ? "bg-white border-teal-200 shadow-sm" 
+                    : "bg-stone-50 border-stone-200 step-inactive";
+                
+                const html = `
+                    <div class="step-card border rounded-xl p-5 ${stepClasses}">
+                        <div class="flex items-start gap-4">
+                            <div class="text-3xl">${step.icon}</div>
+                            <div class="flex-1">
+                                <div class="flex justify-between items-center mb-1">
+                                    <h3 class="font-bold text-stone-800 text-lg">Étape ${step.id} : ${step.title}</h3>
+                                    ${!isActive ? '<span class="text-xs font-semibold bg-stone-200 text-stone-600 px-2 py-1 rounded">Non Requis</span>' : ''}
+                                    ${isActive && step.id === 4 ? '<span class="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-1 rounded">Metro Uniquement</span>' : ''}
+                                    ${isActive && step.id === 5 ? '<span class="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-1 rounded">Metro / Rep-Signed</span>' : ''}
+                                </div>
+                                <p class="text-stone-600 text-sm leading-relaxed">${step.content}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += html;
+            });
+        }
+
+        function renderSpecifics() {
+            const list = document.getElementById('lob-specifics');
+            list.innerHTML = '';
+            lobData[currentLob].specifics.forEach(spec => {
+                list.innerHTML += `<li class="flex gap-2 border-b border-stone-100 pb-2 last:border-0"><span class="text-stone-800">${spec}</span></li>`;
+            });
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('vettingChart').getContext('2d');
+            myChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Légal & Conformité', 'Vérification Financière', 'Qualité & Contenu', 'Sécurité IA'],
+                    datasets: [{
+                        data: lobData[currentLob].chartData,
+                        backgroundColor: ['#0f766e', '#d97706', '#0369a1', '#6b7280'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12,
+                                padding: 15,
+                                font: { size: 11 }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ' ' + context.label;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '65%'
+                }
+            });
+        }
+
+        function updateDashboard() {
+            renderSteps();
+            renderSpecifics();
+            myChart.data.datasets[0].data = lobData[currentLob].chartData;
+            myChart.update();
+        }
+
+        window.addEventListener('DOMContentLoaded', initApp);
+
+        // Configuration API Gemini
+        const apiKey = ""; // Géré par l'environnement
+        const geminiModel = "gemini-2.5-flash-preview-09-2025";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${apiKey}`;
+
+        // Fonction utilitaire pour fetch avec retry (exponential backoff)
+        async function fetchWithRetry(url, options, maxRetries = 3) {
+            let delay = 1000;
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.ok) return response;
+                    if (response.status !== 429) throw new Error(`HTTP Error: ${response.status}`);
+                } catch (error) {
+                    if (i === maxRetries - 1) throw error;
+                }
+                await new Promise(resolve => setTimeout(resolve, delay));
+                delay *= 2;
+            }
+        }
+
+        // --- Logique de la Modale de Fraude ---
+        function openFraudModal() {
+            document.getElementById('fraud-modal').style.display = 'flex';
+            document.getElementById('fraud-result').classList.add('hidden');
+        }
+
+        function closeFraudModal() {
+            document.getElementById('fraud-modal').style.display = 'none';
+        }
+
+        document.getElementById('fraud-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('f-submit');
+            const resultBox = document.getElementById('fraud-result');
+            
+            const name = document.getElementById('f-name').value;
+            const url = document.getElementById('f-url').value;
+            const country = document.getElementById('f-country').value;
+            const deal = document.getElementById('f-deal').value;
+
+            btn.disabled = true;
+            btn.innerHTML = `<div class="typing-indicator"><div class="typing-dot bg-white"></div><div class="typing-dot bg-white"></div><div class="typing-dot bg-white"></div></div> Analyse en cours...`;
+            resultBox.classList.add('hidden');
+            resultBox.className = "mt-6 p-4 rounded-lg text-sm border"; // reset classes
+
+            const systemPrompt = "Tu es un agent de sécurité spécialisé dans la détection de fraude e-commerce pour Groupon. Ton but est d'analyser le profil d'un partenaire. Analyse son nom, son site web, son pays et le titre de son offre. Si le site web semble être une arnaque, ou que le nom ne correspond pas du tout au site, ou s'il s'agit d'un secteur très risqué sans informations claires, tu dois retourner STRICTEMENT 'MANUAL REVIEW REQUIRED'. Si tout semble cohérent et standard, retourne STRICTEMENT 'NO MAJOR FRAUD INDICATORS DETECTED'. Ajoute ensuite un saut de ligne et une très courte justification de 2 phrases maximum.";
+            const userPrompt = `Analyse ce marchand : \nNom: ${name}\nSite Web: ${url}\nPays: ${country}\nTitre du Deal: ${deal}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userPrompt }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+            };
+
+            try {
+                const response = await fetchWithRetry(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                const text = result.candidates[0].content.parts[0].text;
+                
+                resultBox.classList.remove('hidden');
+                
+                if (text.includes("NO MAJOR FRAUD INDICATORS")) {
+                    resultBox.classList.add("bg-green-50", "border-green-200", "text-green-800");
+                    resultBox.innerHTML = `<strong>✅ Résultat : NO MAJOR FRAUD INDICATORS DETECTED</strong><br><p class="mt-2 text-green-700">${text.replace('NO MAJOR FRAUD INDICATORS DETECTED', '').trim()}</p>`;
+                } else {
+                    resultBox.classList.add("bg-red-50", "border-red-200", "text-red-800");
+                    resultBox.innerHTML = `<strong>⚠️ Résultat : MANUAL REVIEW REQUIRED</strong><br><p class="mt-2 text-red-700">${text.replace('MANUAL REVIEW REQUIRED', '').trim()}</p><p class="mt-2 font-bold text-xs uppercase">Action: N'approuvez pas. Signalez au Team Lead.</p>`;
+                }
+
+            } catch (error) {
+                resultBox.classList.remove('hidden');
+                resultBox.classList.add("bg-stone-100", "border-stone-300", "text-stone-700");
+                resultBox.innerHTML = "❌ Erreur de connexion avec l'IA. Veuillez réessayer.";
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = "Lancer l'Analyse";
+            }
+        });
+
+        // --- Logique du Chatbot IA ---
+        let chatHistory = [];
+        const sopContext = `Tu es l'assistant IA 'OneTouch' de l'équipe Vetting. Tu réponds de manière concise, précise et en français aux agents de vetting.
+        Voici tes règles (SOPs) :
+        1. DAC7/DSA : Requis (Submitted/Verified). UE = case Self-Certified cochée. Travel=Exempt pour offres INTL sur plateforme AU.
+        2. Pricing : Comparer Unit Value Salesforce vs Site/PV. Ajuster Salesforce si écart, faire capture, envoyer IR au rep, balise #valueadjusted. Règle assouplie pour GLive (si introuvable, approuver sans IR). Pas de vérif pour Travel Booking.
+        3. Licences (LVG) : Blank=Rien. LP=Vérifier. DNC/Ban=Rejeter. 
+        4. PDS/Site (Metro) : PDS doit être self-service. Site doit marcher, identité/services alignés.
+        5. Goods INTL : Rejet auto tests covid/Swarovski. Marque T1=approbation stricte. Apple=process spécifique.
+        Si on te pose une question, base-toi UNIQUEMENT sur ces règles. Reste court (2-3 phrases).`;
+
+        function toggleChat() {
+            const chatWindow = document.getElementById('chat-window');
+            chatWindow.style.display = chatWindow.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        function appendMessage(text, sender) {
+            const container = document.getElementById('chat-messages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `msg-bubble ${sender === 'user' ? 'msg-user' : 'msg-ai'}`;
+            msgDiv.innerHTML = text.replace(/\n/g, '<br>');
+            container.appendChild(msgDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            const container = document.getElementById('chat-messages');
+            const typingDiv = document.createElement('div');
+            typingDiv.id = 'typing-indicator';
+            typingDiv.className = 'msg-bubble msg-ai';
+            typingDiv.innerHTML = `<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
+            container.appendChild(typingDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const indicator = document.getElementById('typing-indicator');
+            if (indicator) indicator.remove();
+        }
+
+        document.getElementById('chat-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const inputField = document.getElementById('chat-input');
+            const message = inputField.value.trim();
+            if (!message) return;
+
+            // Ajouter le message utilisateur à l'UI et à l'historique
+            appendMessage(message, 'user');
+            inputField.value = '';
+            chatHistory.push({ role: "user", parts: [{ text: message }] });
+
+            showTypingIndicator();
+
+            const payload = {
+                contents: chatHistory,
+                systemInstruction: { parts: [{ text: sopContext }] },
+            };
+
+            try {
+                const response = await fetchWithRetry(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                let aiResponseText = "";
+                
+                if (result.candidates && result.candidates[0] && result.candidates[0].content) {
+                     aiResponseText = result.candidates[0].content.parts[0].text;
+                } else {
+                     aiResponseText = "Je suis désolé, je n'ai pas pu générer une réponse. Veuillez reformuler.";
+                }
+
+                removeTypingIndicator();
+                appendMessage(aiResponseText, 'ai');
+                
+                // Sauvegarder la réponse dans l'historique
+                chatHistory.push({ role: "model", parts: [{ text: aiResponseText }] });
+
+            } catch (error) {
+                removeTypingIndicator();
+                appendMessage("❌ Erreur de connexion au serveur Gemini. Veuillez réessayer plus tard.", 'ai');
+                // Retirer le dernier message utilisateur de l'historique en cas d'erreur
+                chatHistory.pop();
+            }
+        });
+
+        // --- Logique du Générateur d'IR ---
+        function openIRModal() {
+            document.getElementById('ir-modal').style.display = 'flex';
+            document.getElementById('ir-result-container').classList.add('hidden');
+            document.getElementById('ir-deal').value = '';
+            document.getElementById('ir-context').value = '';
+        }
+
+        function closeIRModal() {
+            document.getElementById('ir-modal').style.display = 'none';
+        }
+
+        function copyIRText() {
+            const textToCopy = document.getElementById('ir-result');
+            textToCopy.select();
+            document.execCommand('copy');
+            // Feedback visuel rapide
+            const copyBtn = document.querySelector('button[onclick="copyIRText()"]');
+            const originalText = copyBtn.innerHTML;
+            copyBtn.innerHTML = '✅ Copié !';
+            setTimeout(() => { copyBtn.innerHTML = originalText; }, 2000);
+        }
+
+        document.getElementById('ir-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('ir-submit');
+            const resultContainer = document.getElementById('ir-result-container');
+            const resultTextarea = document.getElementById('ir-result');
+            
+            const dealName = document.getElementById('ir-deal').value;
+            const reason = document.getElementById('ir-reason').value;
+            const context = document.getElementById('ir-context').value;
+
+            btn.disabled = true;
+            btn.innerHTML = `<div class="typing-indicator"><div class="typing-dot bg-teal-800"></div><div class="typing-dot bg-teal-800"></div><div class="typing-dot bg-teal-800"></div></div> Génération en cours...`;
+            resultContainer.classList.add('hidden');
+
+            const systemPrompt = "Tu es un assistant de rédaction pour l'équipe Vetting de Groupon. Ton rôle est de rédiger des 'Information Requests' (IR) claires, polies et professionnelles, destinées aux commerciaux (Account Owners) pour leur demander de corriger un problème sur une offre. Fournis un seul e-mail avec un objet clair. Rédige-le d'abord en Anglais, puis ajoute quelques tirets (---) et fournis la version en Français.";
+            const userPrompt = `Rédige un e-mail pour l'offre suivante :\n- Titre de l'offre : ${dealName}\n- Problème identifié : ${reason}\n- Contexte/Détails supplémentaires : ${context ? context : "Aucun"}\n\nL'e-mail doit expliquer brièvement le problème et demander au commercial de faire les ajustements nécessaires dans Salesforce ou auprès du partenaire.`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userPrompt }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+            };
+
+            try {
+                const response = await fetchWithRetry(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                const generatedText = result.candidates[0].content.parts[0].text;
+                
+                resultTextarea.value = generatedText.trim();
+                resultContainer.classList.remove('hidden');
+
+            } catch (error) {
+                resultTextarea.value = "❌ Une erreur est survenue lors de la génération. Vérifiez la connexion à l'API Gemini.";
+                resultContainer.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = "✨ Générer le message";
+            }
+        });
+    </script>
+</body>
+</html>
