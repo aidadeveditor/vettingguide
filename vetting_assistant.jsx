@@ -217,7 +217,7 @@ function dac7Tree(lob) {
         decision: "ir", tag: "VAT/Registration Number - Missing",
         internal: "DAC7/DSA : champ « Invalid/Missing ». IR envoyé à l'Opportunity Owner. Le deal ne peut pas avancer tant que DAC7/DSA n'est pas Submitted ou Verified. NE PAS cocher Self-Certified à la place du marchand ; NE PAS rejeter.",
         ecw: "Le statut DAC7/DSA de ce compte doit être renseigné avant que le deal puisse avancer. Merci de soumettre / faire vérifier les informations DAC7/DSA côté marchand.",
-        action: "Envoyer un IR à l'Opportunity Owner. Tag : VAT/Registration Number - Missing.",
+        action: "Envoyer un IR à l'Opportunity Owner.",
       }},
       r_ir_self: { result: {
         decision: "ir", tag: "VAT/Registration Number - Missing",
@@ -238,8 +238,11 @@ function dac7Tree(lob) {
 // ---- Sous-flux réutilisable : VALIDITÉ d'un document PV ----
 // Renvoie un objet de nodes à fusionner. entry = "pvv_start".
 // Sur succès → va vers `okGo`. Sur échec → résultats IR/Follow-up dédiés.
-function pvValidityNodes(market, okGo) {
+function pvValidityNodes(market, okGo, isGoods) {
   const fr = noHandwrittenPV(market);
+  // Pour Goods INTL : après validation du PV, saisir le "Price check name" (source du PV)
+  // avant de conclure. Pour les autres LoB : on va directement à okGo.
+  const afterValid = isGoods ? "pvv_pricecheck" : okGo;
   return {
     pvv_start: {
       q: "Le document PV est-il dans un format accepté ? (.pdf, .png ou .jpeg uniquement — pas de .doc/.xlsx/.txt ni d'éditable)",
@@ -285,12 +288,21 @@ function pvValidityNodes(market, okGo) {
       q: "Le document inclut-il le logo, le nom OU l'adresse du marchand ?",
       help: <>Il faut pouvoir relier le document au marchand : <b>logo, nom ou adresse</b> suffit (un seul des trois).<br /><br />S'il n'y en a aucun, on peut quand même l'accepter <b>si on a la preuve que c'est bien le marchand qui a envoyé le document</b> — par exemple une capture de l'échange email, à condition que la <b>signature de l'email</b> contienne nom/adresse/logo.<br /><br /><b>Attention :</b> une simple confirmation par email (« oui ce prix est correct ») n'est <b>pas</b> un PV valide — il faut un vrai document de prix.</>,
       opts: [
-        { t: "Oui — identité marchand présente", tone: "ok", go: okGo },
-        { t: "Non, mais preuve d'email du marchand (signature avec nom/adresse/logo)", tone: "ok", go: okGo },
+        { t: "Oui — identité marchand présente", tone: "ok", go: afterValid },
+        { t: "Non, mais preuve d'email du marchand (signature avec nom/adresse/logo)", tone: "ok", go: afterValid },
         { t: "Non — aucune identité ni preuve d'envoi", tone: "warn", go: "rpv_no_owner" },
         { t: "Seulement une confirmation email du marchand", tone: "danger", go: "rpv_email_only" },
       ],
     },
+    // Goods INTL : saisie du "Price check name" (source du PV), repris pour le Fine Print
+    ...(isGoods ? { pvv_pricecheck: {
+      input: true,
+      field: "pricecheck",
+      q: "Price check name — saisissez le nom du site web ou de l'entreprise figurant sur la capture / la facture",
+      help: <>Pour Goods INTL, laissez une note dans le deal indiquant la <b>source de la preuve de prix</b>. Sous le champ <b>« Price check name »</b>, inscrivez le nom du site web ou de l'entreprise visible sur la capture d'écran ou la facture. Cette information est reprise pour le <b>Fine Print</b>.</>,
+      placeholder: "ex. amazon.fr, MediaMarkt, facture Sephora…",
+      go: okGo,
+    } } : {}),
     // résultats du sous-flux validité
     rpv_format: { result: { decision: "ir", tag: "—", internal: "PV : format non accepté (seuls .pdf/.png/.jpeg, pas d'éditable). IR pour un PV au bon format.", ecw: "Le document de prix fourni n'est pas dans un format accepté. Merci de fournir un PDF, PNG ou JPEG (les fichiers éditables type .doc/.xlsx/.txt ne sont pas acceptés).", action: "IR — PV au format .pdf/.png/.jpeg." }},
     rpv_timestamp: { result: { decision: "follow", tag: "Proof of Pricing Document Provided does not Include a Timestamp", internal: "PV : capture sans horodatage. Follow-Up.", ecw: "Le Proof of Pricing fourni ne comporte pas d'horodatage. Merci de fournir un document horodaté.", action: "Follow-Up — timestamp manquant." }},
@@ -503,7 +515,7 @@ function pricingTree(lob, market) {
     r_pv_ok: { result: { decision: "pass", tag: "—", internal: "Pricing : document PV vérifié et conforme (format, ancienneté, identité marchand). Prix validé.", ecw: "", action: "Continuer le vetting." }},
 
     // ---------- sous-flux VALIDITÉ PV (réutilisable) ----------
-    ...pvValidityNodes(market, "r_pv_ok"),
+    ...pvValidityNodes(market, "r_pv_ok", isGoods),
   };
 
   return { title: "Pricing", intro: "Valider que le prix fourni par le marchand est bien celui qu'il pratique habituellement. Les règles de Proof of Pricing dépendent du LoB et du marché.", sop, start, nodes };
@@ -761,7 +773,7 @@ function goodsTree() {
         ],
       },
       r_valid_ir: { result: { decision: "ir", tag: "—", internal: "Goods : catégorie en scope de validation (Food/Cosmétique/Détergent) et check QA échoué. IR (templates en colonne Y du QA matrix). Rappel : comprimés/médic. liquides ≠ food ; protein shakes = food (Food Doc requis).", ecw: "Une documentation complémentaire est requise pour cette catégorie de produit. Merci de la fournir via votre commercial.", action: "IR à Sales (voir QA check matrix)." }},
-      r_pass: { result: { decision: "pass", tag: "—", internal: "Goods INTL : marque/Apple/refurbished/validation OK. Penser à la shipping proof si cross-border (pays facturation ≠ pays feature). Ignorer les attributs MRT.", ecw: "", action: "Continuer. Vérifier la shipping proof si cross-border ; ignorer les attributs MRT." }},
+      r_pass: { result: { decision: "pass", tag: "—", internal: "Goods INTL : marque, Apple, refurbished et validation produit : conformes.", ecw: "", action: "Continuer. Vérifier la shipping proof si cross-border ; ignorer les attributs MRT." }},
     },
   };
 }
@@ -824,20 +836,51 @@ function QuestionWithHelp({ q, help }) {
 }
 
 /* =========================================================================
+   Noeud de saisie texte (ex. Price check name pour Goods)
+   ========================================================================= */
+function TextInputNode({ node, onSubmit }) {
+  const [val, setVal] = useState("");
+  const submit = () => { if (val.trim()) onSubmit(val.trim(), node.go); };
+  return (
+    <div style={{ marginTop: 22 }}>
+      <QuestionWithHelp q={node.q} help={node.help} />
+      <input
+        autoFocus
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+        placeholder={node.placeholder || ""}
+        style={{ display: "block", width: "100%", boxSizing: "border-box", marginTop: 12,
+          border: `1.5px solid ${C.line}`, borderRadius: 8, padding: "11px 13px",
+          fontSize: 14.5, fontFamily: "inherit", color: C.ink, outline: "none" }}
+      />
+      <button
+        onClick={submit}
+        disabled={!val.trim()}
+        style={{ marginTop: 12, background: val.trim() ? C.navy : "#c3ccd6", color: "#fff",
+          border: "none", borderRadius: 9, padding: "11px 20px", cursor: val.trim() ? "pointer" : "default",
+          fontSize: 14, fontWeight: 700, fontFamily: "inherit" }}
+      >Enregistrer et continuer</button>
+    </div>
+  );
+}
+
+/* =========================================================================
    Composant d'une étape de contrôle (parcourt un arbre)
    ========================================================================= */
 function CheckRunner({ tree, market, onDone }) {
   const [nodeId, setNodeId] = useState(tree.start);
   const [trail, setTrail] = useState([]); // historique pour "Précédent"
   const [pdsLabel, setPdsLabel] = useState(""); // PDS sélectionné dans la LVG (le cas échéant)
+  const [priceCheck, setPriceCheck] = useState(""); // Price check name (Goods)
   const node = tree.nodes[nodeId];
 
-  // si on tombe sur un result, on remonte au parent (en y joignant le PDS choisi)
+  // si on tombe sur un result, on remonte au parent (en y joignant PDS et Price check name)
   React.useEffect(() => {
     if (node && node.result) {
-      const res = pdsLabel
-        ? { ...node.result, internal: "PDS : " + pdsLabel + ". " + node.result.internal }
-        : node.result;
+      let res = node.result;
+      if (pdsLabel) res = { ...res, internal: "PDS : " + pdsLabel + ". " + res.internal };
+      if (priceCheck) res = { ...res, priceCheck };
       onDone(res, trail);
     }
     // eslint-disable-next-line
@@ -862,6 +905,11 @@ function CheckRunner({ tree, market, onDone }) {
           node={node}
           market={market}
           onSelect={(label, target) => { setPdsLabel(label); goTo(target); }}
+        />
+      ) : node.input ? (
+        <TextInputNode
+          node={node}
+          onSubmit={(val, target) => { if (node.field === "pricecheck") setPriceCheck(val); goTo(target); }}
         />
       ) : (
         <div style={{ marginTop: 22 }}>
@@ -1057,6 +1105,37 @@ export default function App() {
   const marketLabel = market ? (MARKETS.find((m) => m.id === market) || {}).label + " (" + market + ")" : "—";
   const dateStr = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
 
+  function cleanInternal(txt, key) {
+    if (!txt) return "";
+    let t = txt;
+    // retirer uniquement le préfixe = nom du contrôle (déjà affiché en libellé),
+    // sans toucher à "PDS : ..." (info utile ajoutée par le lookup LVG).
+    const prefixes = [
+      "DAC7/DSA", "DAC7 / DSA", "DAC7", "Pricing", "Pricing GLive", "Pricing Goods",
+      "Pricing Travel", "Pricing Metro", "Pricing Property", "Pricing Tour Operator",
+      "Pricing Extranet", "Pricing Voucher", "Pricing NAM/CA Local",
+      "Licensing", "PDS Eligibility", "Localisation", "MCL", "Site web", "Gemini",
+      "Goods INTL", "Goods", "Goods Apple", "Goods T1", "Goods refurbished",
+    ];
+    for (const p of prefixes) {
+      if (t.startsWith(p + " : ")) { t = t.slice((p + " : ").length); break; }
+    }
+    // cas lookup LVG : "PDS : <label>. Licensing : ..." → retirer le "Licensing : " interne
+    t = t.replace(/^(PDS\s:[^.]+\.\s)Licensing\s:\s/, "$1");
+    // retirer les phrases de rappel/conseil
+    const drops = [
+      /Penser à la shipping proof[^.]*\.\s*/gi,
+      /Vérifier la shipping proof si cross-border[^.]*\.\s*/gi,
+      /Ignorer les attributs MRT\.?\s*/gi,
+      /Ne pas lever d'IR sur des incohérences MRT\.?\s*/gi,
+      /\s*Rappel\s*:[^]*$/gi,
+    ];
+    drops.forEach((re) => { t = t.replace(re, ""); });
+    t = t.trim();
+    if (t) t = t.charAt(0).toUpperCase() + t.slice(1);
+    return t;
+  }
+
   const internalNote = useMemo(() => {
     if (phase !== "summary") return "";
     let s = `NOTE DE VETTING — OneTouch\n`;
@@ -1067,13 +1146,15 @@ export default function App() {
     results.forEach((r, i) => {
       const dl = DECISIONS[r.decision].label;
       s += `${i + 1}. ${CHECK_LABEL[r.key]} — [${dl}]\n`;
-      s += `   ${r.internal}\n`;
-      if (r.tag && r.tag !== "—") s += `   Tag : ${r.tag}\n`;
-      if (r.action) s += `   Action : ${r.action}\n`;
+      s += `   ${cleanInternal(r.internal, r.key)}\n`;
+      if (r.priceCheck) s += `   Price check name : ${r.priceCheck}\n`;
+      if (r.decision !== "pass") {
+        if (r.tag && r.tag !== "—") s += `   Tag : ${r.tag}\n`;
+        if (r.action) s += `   Action : ${r.action}\n`;
+      }
       s += `\n`;
     });
-    s += `${"-".repeat(52)}\n`;
-    s += `Rappel : le seul mauvais geste est le geste silencieux. En cas de doute → TL ou formulaire Asana SOP gap.`;
+    s += `${"-".repeat(52)}`;
     return s;
   }, [phase, results, dealId, agent, lobLabel, marketLabel, verdict, dateStr]);
 
