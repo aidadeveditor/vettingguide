@@ -189,7 +189,8 @@ function dac7Tree(lob) {
         q: "Est-ce un nouveau marchand (nouveau compte) sur une plateforme concernée (UE / UK / Canada / Australie) ?",
         help: <>« Nouveau marchand » au sens DAC7 = un <b>compte dont le statut DAC7 n'a pas encore été établi</b> — pas « un marchand qui n'a jamais vendu ». Le contrôle se fait au niveau du <b>Compte (Account)</b>, pas de l'Opportunité.<br /><br />Donc même si le marchand <b>a déjà des offres</b> (ex. en France), tu ne sautes pas le contrôle : tu regardes le champ <b>« DAC7/DSA Info »</b> sur le Compte. S'il est déjà « Submitted/Verified » → il n'est pas « nouveau » au sens DAC7, tu passes. S'il est « Invalid/Missing » → tu le traites comme un nouveau (IR), peu importe son historique commercial.<br /><br />En clair : <b>c'est le champ qui décide, pas l'ancienneté du marchand.</b> Si tu n'es pas sûr, réponds « Oui » et laisse l'étape suivante lire le champ.</>,
         opts: [
-          { t: "Non — marchand existant ou hors périmètre (US, UAE…)", tone: "ok", go: "r_na" },
+          { t: "Non — marchand existant (déjà enregistré)", tone: "ok", go: "r_existing" },
+          { t: "Non — hors périmètre DAC7 (US, UAE…)", tone: "ok", go: "r_na" },
           { t: "Oui — nouveau marchand dans le périmètre", go: lob === "travel" ? "q_au" : "q_field" },
         ],
       },
@@ -246,9 +247,14 @@ function dac7Tree(lob) {
         ecw: "La case DSA/DAC7 Self-Certified doit être cochée par le marchand avant la mise en ligne sur la plateforme UE.",
         action: "Envoyer un IR. Le marchand doit cocher lui-même la case Self-Certified.",
       }},
+      r_existing: { result: {
+        decision: "pass", tag: "—",
+        internal: "Marchand existant — DAC7 OK.",
+        ecw: "", action: "Aucune action DAC7 requise.",
+      }},
       r_na: { result: {
         decision: "pass", tag: "—",
-        internal: "DAC7/DSA : non applicable (marchand existant ou hors périmètre).",
+        internal: "Hors périmètre DAC7 (US / UAE).",
         ecw: "", action: "Aucune action DAC7 requise.",
       }},
     },
@@ -742,7 +748,7 @@ function goodsTree() {
         q: "Le produit est-il de marque (branded) ?",
         help: <>Le système de <b>tiers de marque</b> dit le niveau de risque IP/contrefaçon que Legal a pré-établi.<br /><b>T1</b> = marques à plus fort risque → scrutin maximal (approbation ou doc de provenance requis).<br /><b>T2 / T3</b> = risque moindre → on vette.<br /><b>Vendeur exempté</b> (BVG Airflo, James Russell, E.com Intl en Home &amp; Garden, UPGS, Van Meuwen) → de confiance, on vette.<br /><b>Apple</b> = piste dédiée (liste de vendeurs approuvés), distincte du T1.<br /><br />Le tier se lit dans le champ « Brand » en SF, croisé avec la Tier Brands sheet. <b>Si la marque n'est pas du tout au registre (Tier Brands sheet)</b>, il n'y a pas de classification de risque à appliquer → on considère que c'est OK et on continue.</>,
         opts: [
-          { t: "Non — produit sans marque", tone: "ok", go: "q_refurb" },
+          { t: "Non — produit sans marque", tone: "ok", go: "q_refurb", note: "Non-branded." },
           { t: "Marque absente du registre (Tier Brands sheet)", tone: "ok", go: "q_refurb" },
           { t: "Oui — c'est de l'Apple", go: "q_apple" },
           { t: "Oui — T2 / T3 ou vendeur exempté", tone: "ok", go: "q_refurb" },
@@ -859,8 +865,8 @@ function QuestionWithHelp({ q, help }) {
 /* =========================================================================
    Noeud de saisie texte (ex. Price check name pour Goods)
    ========================================================================= */
-function TextInputNode({ node, onSubmit }) {
-  const [val, setVal] = useState("");
+function TextInputNode({ node, initialValue, onSubmit }) {
+  const [val, setVal] = useState(initialValue || "");
   const submit = () => { if (val.trim()) onSubmit(val.trim(), node.go); };
   return (
     <div style={{ marginTop: 22 }}>
@@ -893,15 +899,18 @@ function CheckRunner({ tree, market, onDone }) {
   const [nodeId, setNodeId] = useState(tree.start);
   const [trail, setTrail] = useState([]); // historique pour "Précédent"
   const [pdsLabel, setPdsLabel] = useState(""); // PDS sélectionné dans la LVG (le cas échéant)
+  const [pdsPicked, setPdsPicked] = useState(null); // objet {id,label} pour réaffichage au retour
   const [priceCheck, setPriceCheck] = useState(""); // Price check name (Goods)
+  const [noteOverride, setNoteOverride] = useState(""); // constat court imposé par une option (ex. Non-branded)
   const node = tree.nodes[nodeId];
 
-  // si on tombe sur un result, on remonte au parent (en y joignant PDS et Price check name)
+  // si on tombe sur un result, on remonte au parent (en y joignant PDS / Price check / note imposée)
   React.useEffect(() => {
     if (node && node.result) {
       let res = node.result;
+      if (noteOverride && res.decision === "pass") res = { ...res, internal: noteOverride };
       if (pdsLabel) res = { ...res, internal: "PDS : " + pdsLabel + ". " + res.internal };
-      if (priceCheck) res = { ...res, priceCheck };
+      if (priceCheck && nodeId === "r_pv_ok") res = { ...res, priceCheck };
       onDone(res, trail);
     }
     // eslint-disable-next-line
@@ -912,6 +921,7 @@ function CheckRunner({ tree, market, onDone }) {
   }
 
   const goTo = (target) => { setTrail([...trail, nodeId]); setNodeId(target); };
+  const pick = (o) => { if (o.note) setNoteOverride(o.note); goTo(o.go); };
 
   return (
     <div>
@@ -925,18 +935,20 @@ function CheckRunner({ tree, market, onDone }) {
         <LvgLookup
           node={node}
           market={market}
-          onSelect={(label, target) => { setPdsLabel(label); goTo(target); }}
+          initialPicked={pdsPicked}
+          onSelect={(label, target, pickedObj) => { setPdsLabel(label); if (pickedObj) setPdsPicked(pickedObj); goTo(target); }}
         />
       ) : node.input ? (
         <TextInputNode
           node={node}
+          initialValue={node.field === "pricecheck" ? priceCheck : ""}
           onSubmit={(val, target) => { if (node.field === "pricecheck") setPriceCheck(val); goTo(target); }}
         />
       ) : (
         <div style={{ marginTop: 22 }}>
           <QuestionWithHelp q={node.q} help={node.help} />
           {node.opts.map((o, i) => (
-            <Choice key={i} tone={o.tone} onClick={() => goTo(o.go)}>
+            <Choice key={i} tone={o.tone} onClick={() => pick(o)}>
               {o.t}
             </Choice>
           ))}
@@ -945,21 +957,24 @@ function CheckRunner({ tree, market, onDone }) {
 
       {trail.length > 0 && (
         <button
-          onClick={() => { const t = [...trail]; const prev = t.pop(); setTrail(t); setNodeId(prev); }}
+          onClick={() => {
+            const t = [...trail]; const prev = t.pop(); setTrail(t); setNodeId(prev);
+            setNoteOverride("");
+          }}
           style={{
             marginTop: 18, background: "transparent", border: "none", color: C.blue,
             cursor: "pointer", fontSize: 13.5, fontWeight: 600, fontFamily: "inherit", padding: 0,
           }}
-        >← Question précédente</button>
+        >← Étape précédente</button>
       )}
     </div>
   );
 }
 
 // Composant de recherche/sélection d'un PDS dans la LVG, avec affichage de l'exigence pays
-function LvgLookup({ node, market, onSelect }) {
+function LvgLookup({ node, market, initialPicked, onSelect }) {
   const [query, setQuery] = useState("");
-  const [picked, setPicked] = useState(null); // {id,label}
+  const [picked, setPicked] = useState(initialPicked || null); // {id,label}
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
@@ -1009,12 +1024,12 @@ function LvgLookup({ node, market, onSelect }) {
             </div>
           )}
           <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <button onClick={() => onSelect("", node.goNotFound)}
+            <button onClick={() => onSelect("", node.goNotFound, null)}
               style={{ background: "transparent", border: `1.5px solid ${C.line}`, color: C.sub,
                 borderRadius: 8, padding: "9px 14px", cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "inherit" }}>
               PDS non listé → pas d'exigence
             </button>
-            <button onClick={() => onSelect("DNC", node.goDnc)}
+            <button onClick={() => onSelect("DNC", node.goDnc, null)}
               style={{ background: "transparent", border: `1.5px solid #eccac7`, color: C.danger,
                 borderRadius: 8, padding: "9px 14px", cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "inherit" }}>
               Ce PDS est DNC / banni
@@ -1042,10 +1057,10 @@ function LvgLookup({ node, market, onSelect }) {
                 whiteSpace: "pre-wrap", maxHeight: 320, overflowY: "auto" }}>
                 {req.text}
               </div>
-              <Choice tone="neutral" onClick={() => onSelect(picked.label, node.goMassage)}>
+              <Choice tone="neutral" onClick={() => onSelect(picked.label, node.goMassage, picked)}>
                 C'est un PDS <b>Massage</b> → vérifier licence + Online Reviews + Location
               </Choice>
-              <Choice tone="neutral" onClick={() => onSelect(picked.label, node.goWithReq)}>
+              <Choice tone="neutral" onClick={() => onSelect(picked.label, node.goWithReq, picked)}>
                 Vérifier que le marchand a fourni ces documents
               </Choice>
             </div>
@@ -1056,7 +1071,7 @@ function LvgLookup({ node, market, onSelect }) {
                 Aucune licence/document n'est listé dans la LVG pour ce PDS sur le marché <b>{colName}</b>.
                 Ce PDS est donc traité comme <b>Blank</b> (pas de contrôle de licence requis sur ce marché).
               </div>
-              <Choice tone="ok" onClick={() => onSelect(picked.label, node.goNoReq)}>
+              <Choice tone="ok" onClick={() => onSelect(picked.label, node.goNoReq, picked)}>
                 OK — aucune exigence pour {colName}, continuer
               </Choice>
             </div>
