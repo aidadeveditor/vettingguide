@@ -728,9 +728,10 @@ function goodsTree() {
     nodes: {
       q_brand: {
         q: "Le produit est-il de marque (branded) ?",
-        help: <>Le système de <b>tiers de marque</b> dit le niveau de risque IP/contrefaçon que Legal a pré-établi.<br /><b>T1</b> = marques à plus fort risque → scrutin maximal (approbation ou doc de provenance requis).<br /><b>T2 / T3</b> = risque moindre → on vette.<br /><b>Vendeur exempté</b> (BVG Airflo, James Russell, E.com Intl en Home &amp; Garden, UPGS, Van Meuwen) → de confiance, on vette.<br /><b>Apple</b> = piste dédiée (liste de vendeurs approuvés), distincte du T1.<br /><br />Le tier se lit dans le champ « Brand » en SF, croisé avec la Tier Brands sheet.</>,
+        help: <>Le système de <b>tiers de marque</b> dit le niveau de risque IP/contrefaçon que Legal a pré-établi.<br /><b>T1</b> = marques à plus fort risque → scrutin maximal (approbation ou doc de provenance requis).<br /><b>T2 / T3</b> = risque moindre → on vette.<br /><b>Vendeur exempté</b> (BVG Airflo, James Russell, E.com Intl en Home &amp; Garden, UPGS, Van Meuwen) → de confiance, on vette.<br /><b>Apple</b> = piste dédiée (liste de vendeurs approuvés), distincte du T1.<br /><br />Le tier se lit dans le champ « Brand » en SF, croisé avec la Tier Brands sheet. <b>Si la marque n'est pas du tout au registre (Tier Brands sheet)</b>, il n'y a pas de classification de risque à appliquer → on considère que c'est OK et on continue.</>,
         opts: [
           { t: "Non — produit sans marque", tone: "ok", go: "q_refurb" },
+          { t: "Marque absente du registre (Tier Brands sheet)", tone: "ok", go: "q_refurb" },
           { t: "Oui — c'est de l'Apple", go: "q_apple" },
           { t: "Oui — T2 / T3 ou vendeur exempté", tone: "ok", go: "q_refurb" },
           { t: "Oui — marque T1 (hors Apple)", tone: "warn", go: "q_t1" },
