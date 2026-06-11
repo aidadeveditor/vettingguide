@@ -289,9 +289,9 @@ function pvValidityNodes(market, okGo, isGoods) {
     },
     pvv_screenshot: {
       q: "La capture respecte-t-elle TOUTES ces conditions : moins de 30 jours, horodatage (timestamp) visible ET URL visible ?",
-      help: <>Une capture de site n'est valable comme PV que si on peut <b>tout vérifier</b> : la date (≤ 30 jours), un <b>horodatage</b> visible (date/heure de la capture) et l'<b>URL</b> de la page. Sans ces éléments, impossible de prouver que c'est bien le prix actuel du marchand.<br /><br />Cas fréquent : la capture jointe par Sales est absente ou fausse, <b>mais le bon prix est sur le site</b> → c'est à toi (agent CO) de reprendre la capture et de l'attacher à l'opportunité.</>,
+      help: <>Une capture de site n'est valable comme PV que si on peut <b>tout vérifier</b> : la date (moins de 30 jours), un <b>horodatage</b> visible (date/heure de la capture) et l'<b>URL</b> de la page. Sans ces éléments, impossible de prouver que c'est bien le prix actuel du marchand.<br /><br />Cas fréquent : la capture jointe par Sales est absente ou fausse, <b>mais le bon prix est sur le site</b> → c'est à toi (agent CO) de reprendre la capture et de l'attacher à l'opportunité.</>,
       opts: [
-        { t: "Oui — < 30 j + timestamp + URL", tone: "ok", go: "pvv_owner" },
+        { t: "Oui — moins de 30 jours, avec horodatage et URL", tone: "ok", go: "pvv_owner" },
         { t: "Manque timestamp", tone: "warn", go: "rpv_timestamp" },
         { t: "Plus de 30 jours", tone: "warn", go: "rpv_30days" },
         { t: "Capture absente/incorrecte mais bon prix sur le site", tone: "warn", go: "rpv_take_screenshot" },
@@ -359,16 +359,16 @@ function pricingTree(lob, market) {
 
   // SOP par variante
   const sop = isGoods
-    ? <>Goods : PV requis dès qu'il y a une remise. PV valide = URL vendeur/fabricant, image, prix, achetable. Unit Value SF ≤ PV. Liste de prix : <b>{priceListMonths(market)} mois</b> max sur ce marché (DE/ES 6, autres 12). UK + marque T1 Comparable → Reputable Retailer/fabricant (refurb : PV vendeur OK).</>
+    ? <>Goods : PV requis dès qu'il y a une remise. PV valide = URL vendeur/fabricant, image, prix, achetable. la Unit Value SF ne doit pas dépasser le prix du PV. Liste de prix : <b>{priceListMonths(market)} mois</b> max sur ce marché (DE/ES 6, autres 12). UK + marque T1 Comparable → Reputable Retailer/fabricant (refurb : PV vendeur OK).</>
     : isTravel
     ? <>Booking & Hotel Trader : <b>pas de PV</b>. Extranet : PV par add-on inclus dans le prix de référence (ne pas masquer la remise des Extranet 0 %). Voucher : PV pour la nuitée + chaque add-on. PV Travel en devise du pays du partenaire.</>
     : isGlive
-    ? <>GLive : tenter de valider (site ou PV ; LiveNation Tour Docs acceptés). Si validable → notre prix ≤ site. Si non validable / PV non conforme → <b>pousser sans IR</b>.{convNote}</>
+    ? <>GLive : tenter de valider (site ou PV ; LiveNation Tour Docs acceptés). Si validable → notre prix ne doit pas dépasser celui du site. Si non validable / PV non conforme → <b>pousser sans IR</b>.{convNote}</>
     : isMetro
-    ? <>Metro : prix vérifié via le lien fourni par le marchand. Si service listé mais notre prix &gt; site → amender la valeur. Si l'ajustement crée une remise négative → Follow-Up « Incorrect Pricing » (les DEUX prix dans l'ECW). Service non listé / pas de prix / site KO → approuver (US) ou approuver avec remise masquée (INTL).</>
+    ? <>Metro : prix vérifié via le lien fourni par le marchand. Si le service est listé mais que notre prix est supérieur à celui du site → amender la valeur. Si l'ajustement crée une remise négative → Follow-Up « Incorrect Pricing » (les DEUX prix dans l'ECW). Service non listé / pas de prix / site KO → approuver (US) ou approuver avec remise masquée (INTL).</>
     : nam
-    ? <>NAM &amp; CA Local : <b>PV requis si remise ≥ 40 %</b>. Comparer site (et amendement si « Signed with the contract ») vs SF. Site &lt; SF → <b>IR</b> même si « Signed with the contract ». Pas de prix site → champ Proof of Pricing en SF.{convNote}</>
-    : <>Local / National (INTL) : <b>pas de seuil de 40 %</b>. Toujours tenter de valider via le site ou un PV. Comparer le prix public au prix SF (et à l'amendement signé le cas échéant). Site &lt; SF → <b>IR</b>. Pas de prix public → champ Proof of Pricing en SF.{convNote}</>;
+    ? <>NAM &amp; CA Local : <b>PV requis si la remise est supérieure ou égale à 40 %</b>. Comparer site (et amendement si « Signed with the contract ») vs SF. Site inférieur à SF → <b>IR</b> même si « Signed with the contract ». Pas de prix site → champ Proof of Pricing en SF.{convNote}</>
+    : <>Local / National (INTL) : <b>pas de seuil de 40 %</b>. Toujours tenter de valider via le site ou un PV. Comparer le prix public au prix SF (et à l'amendement signé le cas échéant). Site inférieur à SF → <b>IR</b>. Pas de prix public → champ Proof of Pricing en SF.{convNote}</>;
 
   // Point d'entrée selon variante
   let start;
@@ -418,9 +418,9 @@ function pricingTree(lob, market) {
     },
     r_ir_tour: { result: { decision: "ir", tag: "—", internal: "Pricing Tour Operator : doc de soumission manquant ou écart de salient features. IR à Sales.", ecw: "Merci de fournir / corriger le document de soumission (les caractéristiques ne correspondent pas aux options du deal).", action: "IR à Sales." }},
     q_prop: {
-      q: "Le prix Groupon est-il ≤ au prix du site (hôtel) ?",
+      q: "Le prix Groupon est-il inférieur ou égal au prix du site (hôtel) ?",
       opts: [
-        { t: "Oui, prix ≤ site", tone: "ok", go: "r_pass" },
+        { t: "Oui, prix inférieur ou égal au site", tone: "ok", go: "r_pass" },
         { t: "Non, Groupon plus cher", tone: "warn", go: "r_ir_prop" },
       ],
     },
@@ -447,20 +447,20 @@ function pricingTree(lob, market) {
     },
     r_pass_nodisc: { result: { decision: "pass", tag: "—", internal: "Pricing : 0 % de remise → pas de vérification de prix nécessaire (vérifier seulement Sell Price = Unit Value).", ecw: "", action: "Continuer." }},
     q_goods_pv: {
-      q: "Un PV est-il attaché ET la Unit Value SF ≤ prix du PV ?",
+      q: "Un PV est-il attaché ET la Unit Value SF est-elle inférieure ou égale au prix du PV ?",
       opts: [
-        { t: "Oui — PV présent, Unit Value ≤ PV", tone: "ok", go: "pvv_start" },
-        { t: "PV manquant ou Unit Value > PV", tone: "warn", go: "r_ir_goods" },
+        { t: "Oui — PV présent, Unit Value inférieure ou égale au PV", tone: "ok", go: "pvv_start" },
+        { t: "PV manquant, ou Unit Value supérieure au prix du PV", tone: "warn", go: "r_ir_goods" },
       ],
     },
-    r_ir_goods: { result: { decision: "ir", tag: "—", internal: "Pricing Goods : PV manquant ou Unit Value > PV. IR. Rappel : Amazon OK si « Dispatched and sold by Amazon » ou nom vendeur = SF ; eBay seulement si boutique propre ; Allegro/AliExpress/convertisseurs refusés.", ecw: "Merci de fournir un Proof of Pricing valide (URL vendeur/fabricant, image produit, prix, produit achetable) ; la valeur du deal ne peut pas dépasser le prix justifié.", action: "IR à Sales." }},
+    r_ir_goods: { result: { decision: "ir", tag: "—", internal: "Pricing Goods : PV manquant, ou Unit Value supérieure au prix du PV. IR. Rappel : Amazon OK si « Dispatched and sold by Amazon » ou nom vendeur = SF ; eBay seulement si boutique propre ; Allegro/AliExpress/convertisseurs refusés.", ecw: "Merci de fournir un Proof of Pricing valide (URL vendeur/fabricant, image produit, prix, produit achetable) ; la valeur du deal ne peut pas dépasser le prix justifié.", action: "IR à Sales." }},
 
     // ---------- METRO (Global) ----------
     q_metro: {
       q: "Le service exact est-il listé sur le site du marchand, et comment se compare le prix ?",
       opts: [
-        { t: "Listé — notre prix > site", tone: "warn", go: "q_metro_neg" },
-        { t: "Listé — prix correct ou notre prix ≤ site", tone: "ok", go: "r_pass" },
+        { t: "Listé — notre prix est supérieur à celui du site", tone: "warn", go: "q_metro_neg" },
+        { t: "Listé — prix correct ou notre prix inférieur ou égal au site", tone: "ok", go: "r_pass" },
         { t: "Non listé / pas de prix / site KO", tone: "warn", go: "r_metro_nolist" },
       ],
     },
@@ -472,15 +472,15 @@ function pricingTree(lob, market) {
         { t: "Oui — remise négative", tone: "warn", go: "r_metro_follow" },
       ],
     },
-    r_metro_amended: { result: { decision: "ir", tag: "—", internal: "Pricing Metro : service listé, notre prix > site → valeur amendée au prix du site. Capture attachée, IR Account Owner, #valueadjusted en Context Notes. " + drinkRule, ecw: "", action: "Amender SF → capture → attacher → IR Account Owner → #valueadjusted." }},
+    r_metro_amended: { result: { decision: "ir", tag: "—", internal: "Pricing Metro : service listé et notre prix supérieur à celui du site → valeur amendée au prix du site. Capture attachée, IR Account Owner, #valueadjusted en Context Notes. " + drinkRule, ecw: "", action: "Amender SF → capture → attacher → IR Account Owner → #valueadjusted." }},
     r_metro_follow: { result: { decision: "follow", tag: "Incorrect Pricing - Doesn't Match With Website (Value)", internal: "Pricing Metro : amender la valeur créerait une remise négative → Follow-Up. ECW doit inclure les DEUX prix (SF + site). (Variante Sell Price → tag « Incorrect Pricing - Competing offer found ».)", ecw: "Nous constatons que le prix régulier sur votre site est de [PRIX SITE], alors que le prix régulier saisi dans le deal est de [PRIX SF]. Merci d'aligner le prix régulier du deal sur celui de votre site, ou de fournir un Proof of Pricing à jour justifiant le montant supérieur.", action: "Follow-Up — Incorrect Pricing (les deux prix dans l'ECW)." }},
     r_metro_nolist: { result: { decision: "pass", tag: "—", internal: "Pricing Metro : service non listé / pas de prix / site KO → approuver" + (nam ? " (US : approbation simple)." : " avec remise masquée (INTL)."), ecw: "", action: nam ? "Approuver." : "Approuver avec remise masquée (INTL)." }},
     // entrée GLive «via le site» réutilise la logique metro-like
     q_metro_like: {
       q: "Notre prix dépasse-t-il le prix listé sur le site ?",
       opts: [
-        { t: "Non — notre prix ≤ site", tone: "ok", go: "r_pass" },
-        { t: "Oui — notre prix > site", tone: "warn", go: "r_metro_amended" },
+        { t: "Non — notre prix inférieur ou égal au site", tone: "ok", go: "r_pass" },
+        { t: "Oui — notre prix est supérieur à celui du site", tone: "warn", go: "r_metro_amended" },
       ],
     },
 
@@ -497,7 +497,7 @@ function pricingTree(lob, market) {
       q: "Y a-t-il un prix public sur le site du marchand, et correspond-il à SF ?",
       opts: [
         { t: "Oui — correspond (ou pas de PV requis ici)", tone: "ok", go: "r_pass" },
-        { t: "Site < SF (ou amendement < SF)", tone: "warn", go: "r_ir_local" },
+        { t: "Site inférieur à SF (ou inférieur à l'amendement)", tone: "warn", go: "r_ir_local" },
       ],
     },
     q_local_site: {
@@ -511,7 +511,7 @@ function pricingTree(lob, market) {
       q: "Le prix public correspond-il aux prix SF (et à l'amendement signé si « Signed with the contract ») ?",
       opts: [
         { t: "Oui — tout correspond", tone: "ok", go: "pvv_start" },
-        { t: "Site < SF, OU site < amendement", tone: "warn", go: "r_ir_local" },
+        { t: "Site inférieur à SF, OU inférieur à l'amendement", tone: "warn", go: "r_ir_local" },
       ],
     },
     r_ir_local: { result: { decision: "ir", tag: "—", internal: "Pricing NAM/CA Local : le prix public du site est inférieur aux prix SF (ou à l'amendement). IR obligatoire même si le champ Proof of Pricing dit « Signed with the contract ».", ecw: "Le prix affiché sur votre site est inférieur au prix saisi dans le deal. Merci d'aligner les prix ou de fournir un justificatif à jour.", action: "IR — discrepancy site/SF (même si « Signed with the contract »)." }},
@@ -534,7 +534,7 @@ function pricingTree(lob, market) {
     },
     r_ir_amendment: { result: { decision: "ir", tag: "—", internal: "Pricing : champ « Signed with the contract » mais amendement de prix non attaché ou non signé. IR demandant la signature ou un Proof of Pricing.", ecw: "L'amendement de prix lié au contrat n'est pas signé ou n'est pas joint. Merci de fournir l'amendement signé ou un Proof of Pricing.", action: "IR — amendement signé / PV." }},
     r_local_later: { result: { decision: "ir", tag: "—", internal: "Pricing : pas de prix public, champ PV = « Merchant Will Provide Later ». Le deal nécessite un PV s'il y a une remise. IR / attendre le PV.", ecw: "Un Proof of Pricing est requis pour lancer ce deal avec remise. Merci de le fournir.", action: "IR — attendre le PV (Merchant Will Provide Later)." }},
-    r_ir_pvfield: { result: { decision: "ir", tag: "—", internal: "Pricing : pas de prix public et champ PV ≠ « Merchant Will Provide Later » / ≠ « Signed with the contract ». IR demandant un Proof of Pricing.", ecw: "Un Proof of Pricing est requis pour valider le prix de ce deal. Merci de le fournir.", action: "IR — demander le PV." }},
+    r_ir_pvfield: { result: { decision: "ir", tag: "—", internal: "Pricing : pas de prix public et le champ PV n'est ni « Merchant Will Provide Later » ni « Signed with the contract ». IR demandant un Proof of Pricing.", ecw: "Un Proof of Pricing est requis pour valider le prix de ce deal. Merci de le fournir.", action: "IR — demander le PV." }},
 
     // ---------- résultats partagés ----------
     r_pass: { result: { decision: "pass", tag: "—", internal: "Pricing : prix validé (correspond au site / PV conforme). " + drinkRule, ecw: "", action: "Continuer le vetting." }},
@@ -741,24 +741,26 @@ function goodsTree() {
   return {
     title: "Goods INTL — marque, Apple & refurbished",
     intro: "Flux Goods INTL (Gazebo) en plus des contrôles cœur. NAM Goods (Gateway) n'est PAS couvert — escalader.",
-    sop: <>Brand tier : T1 = scrutin max, T2/T3 ou vendeur exempté = vetter. <b>Apple</b> a un flux dédié (liste de vendeurs approuvés). Refurbished : grade A/B/C obligatoire ; si manquante → IR à Sales (≠ NAM Gateway qui rejette). Vendeurs exemptés : BVG Airflo, James Russell, E.com Intl (Home &amp; Garden), UPGS, Van Meuwen.</>,
+    sop: <>Brand tier : T1 = scrutin max, T2/T3 ou vendeur exempté = vetter. <b>Apple</b> a un flux dédié (liste de vendeurs approuvés). Refurbished : grade A/B/C obligatoire ; si manquante → IR à Sales (contrairement à NAM Gateway qui rejette). Vendeurs exemptés : BVG Airflo, James Russell, E.com Intl (Home &amp; Garden), UPGS, Van Meuwen.</>,
     start: "q_brand",
     nodes: {
       q_brand: {
         q: "Le produit est-il de marque (branded) ?",
         help: <>Le système de <b>tiers de marque</b> dit le niveau de risque IP/contrefaçon que Legal a pré-établi.<br /><b>T1</b> = marques à plus fort risque → scrutin maximal (approbation ou doc de provenance requis).<br /><b>T2 / T3</b> = risque moindre → on vette.<br /><b>Vendeur exempté</b> (BVG Airflo, James Russell, E.com Intl en Home &amp; Garden, UPGS, Van Meuwen) → de confiance, on vette.<br /><b>Apple</b> = piste dédiée (liste de vendeurs approuvés), distincte du T1.<br /><br />Le tier se lit dans le champ « Brand » en SF, croisé avec la Tier Brands sheet. <b>Si la marque n'est pas du tout au registre (Tier Brands sheet)</b>, il n'y a pas de classification de risque à appliquer → on considère que c'est OK et on continue.</>,
         opts: [
-          { t: "Non — produit sans marque", tone: "ok", go: "q_refurb", note: "Non-branded." },
-          { t: "Marque absente du registre (Tier Brands sheet)", tone: "ok", go: "q_refurb" },
+          { t: "Non — produit sans marque", tone: "ok", go: "q_refurb", frag: "Non-branded" },
+          { t: "Marque absente du registre (Tier Brands sheet)", tone: "ok", go: "q_refurb", frag: "Marque hors registre" },
           { t: "Oui — c'est de l'Apple", go: "q_apple" },
-          { t: "Oui — T2 / T3 ou vendeur exempté", tone: "ok", go: "q_refurb" },
+          { t: "Oui — marque T2", tone: "ok", go: "q_refurb", frag: "Marque T2" },
+          { t: "Oui — marque T3", tone: "ok", go: "q_refurb", frag: "Marque T3" },
+          { t: "Oui — vendeur exempté", tone: "ok", go: "q_refurb", frag: "Vendeur exempté" },
           { t: "Oui — marque T1 (hors Apple)", tone: "warn", go: "q_t1" },
         ],
       },
       q_apple: {
         q: "Le vendeur est-il sur la liste Apple approuvée (Tier Brands sheet, exceptions en rouge) ?",
         opts: [
-          { t: "Oui — vendeur approuvé", tone: "ok", go: "q_airpods" },
+          { t: "Oui — vendeur approuvé", tone: "ok", go: "q_airpods", frag: "Apple, vendeur approuvé" },
           { t: "Non — vendeur non approuvé", tone: "danger", go: "r_hold_apple" },
           { t: "Produit « lookalike » AirPods (non Apple)", tone: "danger", go: "r_ip" },
         ],
@@ -770,27 +772,29 @@ function goodsTree() {
           { t: "Lookalike / doute IP", tone: "danger", go: "r_ip" },
         ],
       },
-      r_hold_apple: { result: { decision: "hold", tag: "Legal", internal: "Goods Apple : vendeur non approuvé → Legal hold pour revue de provenance avec Ops. Sales obtient la doc de provenance (factures fournisseurs / chaîne de distribution). Une fois validé, Ops ajoute le vendeur à la liste.", ecw: "Une vérification de provenance est en cours pour ce produit de marque. Merci de fournir la documentation fournisseur (factures / chaîne d'approvisionnement) via votre commercial.", action: "Legal hold + IR à Sales pour provenance. Ne pas vetter tant que Legal n'a pas validé." }},
-      r_ip: { result: { decision: "escalate", tag: "Legal", internal: "Goods : produit « lookalike » Apple (non fabriqué par Apple) → flag à Legal pour infraction IP possible. NE PAS vetter comme Apple.", ecw: "", action: "Escalader à Legal (IP). Ne pas vetter comme produit Apple." }},
+      r_hold_apple: { result: { decision: "hold", tag: "Legal", internal: "Apple : vendeur non approuvé → Legal hold (revue de provenance avec Ops).", ecw: "Une vérification de provenance est en cours pour ce produit de marque. Merci de fournir la documentation fournisseur (factures / chaîne d'approvisionnement) via votre commercial.", action: "Legal hold + IR à Sales pour provenance. Ne pas vetter tant que Legal n'a pas validé." }},
+      r_ip: { result: { decision: "escalate", tag: "Legal", internal: "Produit « lookalike » Apple (non fabriqué par Apple) → flag Legal (infraction IP possible).", ecw: "", action: "Escalader à Legal (IP). Ne pas vetter comme produit Apple." }},
       q_t1: {
         q: "Y a-t-il une approbation valide dans l'Approval History OU un document de provenance attaché ? (non requis pour refurbished)",
         opts: [
-          { t: "Oui — approbation ou provenance présente", tone: "ok", go: "q_refurb" },
-          { t: "Produit refurbished (provenance non requise)", tone: "ok", go: "q_refurb" },
+          { t: "Oui — approbation ou provenance présente", tone: "ok", go: "q_refurb", frag: "Marque T1 (approbation/provenance OK)" },
+          { t: "Produit refurbished (provenance non requise)", tone: "ok", go: "q_refurb", frag: "Marque T1" },
           { t: "Non — ni approbation ni provenance", tone: "warn", go: "r_hold_t1" },
         ],
       },
-      r_hold_t1: { result: { decision: "ir", tag: "Legal", internal: "Goods T1 : ni approbation (Approval History par un approbateur autorisé) ni provenance doc. Deal en attente jusqu'à obtention de l'un des deux.", ecw: "Ce produit de marque nécessite une validation interne (approbation ou document de provenance) avant mise en ligne.", action: "Obtenir une approbation d'un approbateur autorisé OU un provenance doc. IR à Sales si nécessaire." }},
+      r_hold_t1: { result: { decision: "ir", tag: "Legal", internal: "Marque T1 : ni approbation ni document de provenance. Deal en attente.", ecw: "Ce produit de marque nécessite une validation interne (approbation ou document de provenance) avant mise en ligne.", action: "Obtenir une approbation d'un approbateur autorisé OU un provenance doc. IR à Sales si nécessaire." }},
       q_refurb: {
         q: "Le produit est-il reconditionné (refurbished) ?",
         help: <>Un produit <b>reconditionné</b> doit afficher une <b>grade A / B / C</b> (état). Cette grade vient du vendeur, transmise par Sales.<br /><br />Si la grade <b>manque</b> : sur Goods <b>INTL</b> on ne rejette pas — on fait un IR à Sales et le deal attend en « Rep Getting Info » (le body copy devra mentionner la grade avant lancement). C'est l'<b>inverse de NAM Gateway</b>, où une grade manquante = rejet automatique.</>,
         opts: [
           { t: "Non — produit neuf", tone: "ok", go: "q_valid" },
-          { t: "Oui — grade A/B/C présente", tone: "ok", go: "q_valid" },
+          { t: "Oui — grade A", tone: "ok", go: "q_valid", frag: "refurbished grade A" },
+          { t: "Oui — grade B", tone: "ok", go: "q_valid", frag: "refurbished grade B" },
+          { t: "Oui — grade C", tone: "ok", go: "q_valid", frag: "refurbished grade C" },
           { t: "Oui — grade MANQUANTE", tone: "warn", go: "r_refurb_ir" },
         ],
       },
-      r_refurb_ir: { result: { decision: "ir", tag: "—", internal: "Goods refurbished : grade A/B/C manquante. IR à Sales (≠ NAM Gateway qui rejette). Le deal reste en Rep Getting Info jusqu'à confirmation ; le body copy doit mentionner la grade avant lancement.", ecw: "Ce produit reconditionné doit afficher son grade de reconditionnement (A, B ou C). Merci de confirmer le grade auprès du fournisseur.", action: "IR à Sales pour la grade. Deal en Rep Getting Info. Body copy doit mentionner la grade." }},
+      r_refurb_ir: { result: { decision: "ir", tag: "—", internal: "Produit reconditionné : grade A/B/C manquante. IR à Sales (contrairement à NAM Gateway qui rejette) ; body copy doit mentionner la grade avant lancement.", ecw: "Ce produit reconditionné doit afficher son grade de reconditionnement (A, B ou C). Merci de confirmer le grade auprès du fournisseur.", action: "IR à Sales pour la grade. Deal en Rep Getting Info." }},
       q_valid: {
         q: "Catégorie soumise à validation (Food/Cosmétique/Détergent) ? Les checks QA passent-ils ?",
         opts: [
@@ -799,8 +803,8 @@ function goodsTree() {
           { t: "Dans le scope — vérification échouée", tone: "warn", go: "r_valid_ir" },
         ],
       },
-      r_valid_ir: { result: { decision: "ir", tag: "—", internal: "Goods : catégorie en scope de validation (Food/Cosmétique/Détergent) et check QA échoué. IR (templates en colonne Y du QA matrix). Rappel : comprimés/médic. liquides ≠ food ; protein shakes = food (Food Doc requis).", ecw: "Une documentation complémentaire est requise pour cette catégorie de produit. Merci de la fournir via votre commercial.", action: "IR à Sales (voir QA check matrix)." }},
-      r_pass: { result: { decision: "pass", tag: "—", internal: "Goods INTL : marque, Apple, refurbished et validation produit : conformes.", ecw: "", action: "Continuer. Vérifier la shipping proof si cross-border ; ignorer les attributs MRT." }},
+      r_valid_ir: { result: { decision: "ir", tag: "—", internal: "Catégorie en scope de validation (Food/Cosmétique/Détergent) : check QA échoué. IR (QA matrix).", ecw: "Une documentation complémentaire est requise pour cette catégorie de produit. Merci de la fournir via votre commercial.", action: "IR à Sales (voir QA check matrix)." }},
+      r_pass: { result: { decision: "pass", tag: "—", internal: "Conforme.", compose: true, ecw: "", action: "Continuer. Vérifier la shipping proof si cross-border ; ignorer les attributs MRT." }},
     },
   };
 }
@@ -901,14 +905,17 @@ function CheckRunner({ tree, market, onDone }) {
   const [pdsLabel, setPdsLabel] = useState(""); // PDS sélectionné dans la LVG (le cas échéant)
   const [pdsPicked, setPdsPicked] = useState(null); // objet {id,label} pour réaffichage au retour
   const [priceCheck, setPriceCheck] = useState(""); // Price check name (Goods)
-  const [noteOverride, setNoteOverride] = useState(""); // constat court imposé par une option (ex. Non-branded)
+  const [frags, setFrags] = useState([]); // fragments de constat accumulés le long du parcours
   const node = tree.nodes[nodeId];
 
-  // si on tombe sur un result, on remonte au parent (en y joignant PDS / Price check / note imposée)
+  // si on tombe sur un result, on remonte au parent (en y joignant PDS / Price check / fragments)
   React.useEffect(() => {
     if (node && node.result) {
       let res = node.result;
-      if (noteOverride && res.decision === "pass") res = { ...res, internal: noteOverride };
+      // constat composé à partir des choix réels de l'agent (ex. "Marque T3, refurbished grade B : conforme.")
+      if (res.compose && res.decision === "pass" && frags.length) {
+        res = { ...res, internal: frags.map((f) => f.frag).join(", ") + " : conforme." };
+      }
       if (pdsLabel) res = { ...res, internal: "PDS : " + pdsLabel + ". " + res.internal };
       if (priceCheck && nodeId === "r_pv_ok") res = { ...res, priceCheck };
       onDone(res, trail);
@@ -921,7 +928,10 @@ function CheckRunner({ tree, market, onDone }) {
   }
 
   const goTo = (target) => { setTrail([...trail, nodeId]); setNodeId(target); };
-  const pick = (o) => { if (o.note) setNoteOverride(o.note); goTo(o.go); };
+  const pick = (o) => {
+    if (o.frag) setFrags((prev) => [...prev.filter((f) => f.at !== nodeId), { at: nodeId, frag: o.frag }]);
+    goTo(o.go);
+  };
 
   return (
     <div>
@@ -959,7 +969,8 @@ function CheckRunner({ tree, market, onDone }) {
         <button
           onClick={() => {
             const t = [...trail]; const prev = t.pop(); setTrail(t); setNodeId(prev);
-            setNoteOverride("");
+            // on retire le fragment éventuellement choisi à ce noeud (il sera re-choisi en avançant)
+            setFrags((f) => f.filter((x) => x.at !== prev));
           }}
           style={{
             marginTop: 18, background: "transparent", border: "none", color: C.blue,
@@ -1447,15 +1458,15 @@ function PVReference({ market, onClose }) {
 
         <div style={{ marginTop: 8 }}>
           <Row h="Quand un PV est-il requis ?">
-            NAM &amp; CA Local (non-Metro) : {hl("remise ≥ 40 %")}. Getaways &amp; National : dès qu'il y a une remise.
+            NAM &amp; CA Local (non-Metro) : {hl("remise supérieure ou égale à 40 %")}. Getaways &amp; National : dès qu'il y a une remise.
             Travel Booking / Hotel Trader : {hl("pas de PV")}. Extranet : un PV par add-on inclus. Voucher : nuitée + chaque add-on.
-            GLive : tenter ; sinon pousser sans IR. Goods : dès qu'il y a une remise (Unit Value ≤ PV).
+            GLive : tenter ; sinon pousser sans IR. Goods : dès qu'il y a une remise (Unit Value inférieure ou égale au PV).
           </Row>
           <Row h="Validité d'un screenshot de site">
-            {hl("< 30 jours")} + {hl("timestamp")} + {hl("URL")} visibles. Si capture absente/incorrecte mais bon prix sur le site → l'agent CO prend lui-même la capture et l'attache.
+            {hl("moins de 30 jours")} + {hl("timestamp")} + {hl("URL")} visibles. Si capture absente/incorrecte mais bon prix sur le site → l'agent CO prend lui-même la capture et l'attache.
           </Row>
           <Row h="Autres justificatifs acceptés">
-            Reçu / facture {hl("< 3 mois")} · Menu / liste de prix (pas d'expiration pour les services ; {hl("Goods : DE/ES 6 mois, autres 12 mois")}) · Price breakdown pour les packages (hors Goods) · LiveNation Tour Docs (NAM GLive).
+            Reçu / facture {hl("moins de 3 mois")} · Menu / liste de prix (pas d'expiration pour les services ; {hl("Goods : DE/ES 6 mois, autres 12 mois")}) · Price breakdown pour les packages (hors Goods) · LiveNation Tour Docs (NAM GLive).
             Doit inclure logo, nom OU adresse du marchand.
           </Row>
           <Row h="Formats">
