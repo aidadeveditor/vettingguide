@@ -189,9 +189,9 @@ function dac7Tree(lob) {
         q: "Est-ce un nouveau marchand (nouveau compte) sur une plateforme concernée (UE / UK / Canada / Australie) ?",
         help: <>« Nouveau marchand » au sens DAC7 = un <b>compte dont le statut DAC7 n'a pas encore été établi</b> — pas « un marchand qui n'a jamais vendu ». Le contrôle se fait au niveau du <b>Compte (Account)</b>, pas de l'Opportunité.<br /><br />Donc même si le marchand <b>a déjà des offres</b> (ex. en France), tu ne sautes pas le contrôle : tu regardes le champ <b>« DAC7/DSA Info »</b> sur le Compte. S'il est déjà « Submitted/Verified » → il n'est pas « nouveau » au sens DAC7, tu passes. S'il est « Invalid/Missing » → tu le traites comme un nouveau (IR), peu importe son historique commercial.<br /><br />En clair : <b>c'est le champ qui décide, pas l'ancienneté du marchand.</b> Si tu n'es pas sûr, réponds « Oui » et laisse l'étape suivante lire le champ.</>,
         opts: [
+          { t: "Oui — nouveau marchand dans le périmètre", go: lob === "travel" ? "q_au" : "q_field" },
           { t: "Non — marchand existant (déjà enregistré)", tone: "ok", go: "r_existing" },
           { t: "Non — hors périmètre DAC7 (US, UAE…)", tone: "ok", go: "r_na" },
-          { t: "Oui — nouveau marchand dans le périmètre", go: lob === "travel" ? "q_au" : "q_field" },
         ],
       },
       ...(lob === "travel" ? {
@@ -262,31 +262,39 @@ function dac7Tree(lob) {
 }
 
 // --- PRICING ---
+// Noeud générique de contrôle du format (PDF/PNG/JPEG) ; en cas de succès → `next`.
+function fmtNode(next) {
+  return {
+    q: "Le document PV est-il dans un format accepté ? (.pdf, .png ou .jpeg uniquement — pas de .doc/.xlsx/.txt ni d'éditable)",
+    opts: [
+      { t: "Oui — PDF / PNG / JPEG", tone: "ok", go: next },
+      { t: "Non — format éditable / interdit", tone: "warn", go: "rpv_format" },
+    ],
+  };
+}
+
 // ---- Sous-flux réutilisable : VALIDITÉ d'un document PV ----
-// Renvoie un objet de nodes à fusionner. entry = "pvv_start".
+// Renvoie un objet de nodes à fusionner. entry = "pvv_type" (on demande d'abord le type de PV).
 // Sur succès → va vers `okGo`. Sur échec → résultats IR/Follow-up dédiés.
 function pvValidityNodes(market, okGo, isGoods) {
   const fr = noHandwrittenPV(market);
-  // Pour Goods INTL : après validation du PV, saisir le "Price check name" (source du PV)
-  // avant de conclure. Pour les autres LoB : on va directement à okGo.
   const afterValid = isGoods ? "pvv_pricecheck" : okGo;
   return {
-    pvv_start: {
-      q: "Le document PV est-il dans un format accepté ? (.pdf, .png ou .jpeg uniquement — pas de .doc/.xlsx/.txt ni d'éditable)",
-      opts: [
-        { t: "Oui — PDF / PNG / JPEG", go: "pvv_type" },
-        { t: "Non — format éditable / interdit", tone: "warn", go: "rpv_format" },
-      ],
-    },
     pvv_type: {
       q: "Quel type de PV ?",
+      help: <>On identifie d'abord la nature de la preuve de prix, puis on vérifie le format (PDF/PNG/JPEG) et les conditions propres à ce type.</>,
       opts: [
-        { t: "Capture du site marchand / concurrent (ex. Treatwell)", go: "pvv_screenshot" },
-        { t: "Reçu ou facture", go: "pvv_receipt" },
-        { t: "Menu / liste de prix (price list)", go: "pvv_pricelist" },
-        { t: "Manuscrit (dernier recours)", tone: fr ? "danger" : "warn", go: fr ? "rpv_handwritten_fr" : "pvv_owner" },
+        { t: "Capture du site marchand / concurrent (ex. Treatwell)", go: "pvv_fmt_screenshot" },
+        { t: "Reçu ou facture", go: "pvv_fmt_receipt" },
+        { t: "Menu / liste de prix (price list)", go: "pvv_fmt_pricelist" },
+        { t: "Manuscrit (dernier recours)", tone: fr ? "danger" : "warn", go: fr ? "rpv_handwritten_fr" : "pvv_fmt_owner" },
       ],
     },
+    // Vérification du format (commune), branchée vers le contrôle propre à chaque type
+    pvv_fmt_screenshot: fmtNode("pvv_screenshot"),
+    pvv_fmt_receipt: fmtNode("pvv_receipt"),
+    pvv_fmt_pricelist: fmtNode("pvv_pricelist"),
+    pvv_fmt_owner: fmtNode("pvv_owner"),
     pvv_screenshot: {
       q: "La capture respecte-t-elle TOUTES ces conditions : moins de 30 jours, horodatage (timestamp) visible ET URL visible ?",
       help: <>Une capture de site n'est valable comme PV que si on peut <b>tout vérifier</b> : la date (moins de 30 jours), un <b>horodatage</b> visible (date/heure de la capture) et l'<b>URL</b> de la page. Sans ces éléments, impossible de prouver que c'est bien le prix actuel du marchand.<br /><br />Cas fréquent : la capture jointe par Sales est absente ou fausse, <b>mais le bon prix est sur le site</b> → c'est à toi (agent CO) de reprendre la capture et de l'attacher à l'opportunité.</>,
@@ -354,7 +362,7 @@ function pricingTree(lob, market) {
     ? "Bottomless drinks : sur ce marché (FR/BE/NL) AUCUN prix de boisson n'entre dans le prix de référence."
     : "Bottomless drinks : valeur basée sur les 3 boissons les plus chères incluses ; thé illimité = 2 théières max.";
   const convNote = (lob === "local" || lob === "glive" || lob === "national")
-    ? " Devise étrangère : convertir via Google Converter en devise locale (±5 % toléré), capture attachée."
+    ? " Devise étrangère : convertir via Google Converter en devise locale (±5 % toléré), avec capture attachée à l'opportunité."
     : "";
 
   // SOP par variante
@@ -368,7 +376,7 @@ function pricingTree(lob, market) {
     ? <>Metro : prix vérifié via le lien fourni par le marchand. Si le service est listé mais que notre prix est supérieur à celui du site → amender la valeur. Si l'ajustement crée une remise négative → Follow-Up « Incorrect Pricing » (les DEUX prix dans l'ECW). Service non listé / pas de prix / site KO → approuver (US) ou approuver avec remise masquée (INTL).</>
     : nam
     ? <>NAM &amp; CA Local : <b>PV requis si la remise est supérieure ou égale à 40 %</b>. Comparer site (et amendement si « Signed with the contract ») vs SF. Site inférieur à SF → <b>IR</b> même si « Signed with the contract ». Pas de prix site → champ Proof of Pricing en SF.{convNote}</>
-    : <>Local / National (INTL) : <b>pas de seuil de 40 %</b>. Toujours tenter de valider via le site ou un PV. Comparer le prix public au prix SF (et à l'amendement signé le cas échéant). Site inférieur à SF → <b>IR</b>. Pas de prix public → champ Proof of Pricing en SF.{convNote}</>;
+    : <>Local / National (INTL) : <b>pas de seuil de 40 %</b>. Toujours tenter de valider via le site ou un PV. Comparer le prix public au prix SF (et au prix de l'amendement de prix signé le cas échéant). Prix du site inférieur à SF → <b>IR</b>. Pas de prix public → champ Proof of Pricing en SF.{convNote}</>;
 
   // Point d'entrée selon variante
   let start;
@@ -396,7 +404,7 @@ function pricingTree(lob, market) {
       q: "Chaque add-on inclus dans le prix de référence a-t-il un PV ? (rappel : ne pas masquer la remise des Extranet 0 %)",
       help: <>Le <b>prix de référence</b> (reference price) est le « prix barré » à partir duquel on calcule la remise. Pour un deal Travel, il agrège la nuitée et tout ce qui est inclus : petit-déjeuner, bouteille de vin, etc. — chacun de ces <b>add-ons</b> doit avoir son propre justificatif de prix.<br /><br />« Extranet 0 % » : même sans remise affichée, ne masque pas la remise sur ces deals.</>,
       opts: [
-        { t: "Oui — un PV par add-on", tone: "ok", go: "pvv_start" },
+        { t: "Oui — un PV par add-on", tone: "ok", go: "pvv_type" },
         { t: "Non — PV manquant pour un add-on", tone: "warn", go: "r_ir_extranet" },
       ],
     },
@@ -404,7 +412,7 @@ function pricingTree(lob, market) {
     q_voucher: {
       q: "Y a-t-il un PV pour la nuitée (room night rate) ET pour chaque add-on inclus dans le prix de référence ?",
       opts: [
-        { t: "Oui — nuitée + add-ons couverts", tone: "ok", go: "pvv_start" },
+        { t: "Oui — nuitée + add-ons couverts", tone: "ok", go: "pvv_type" },
         { t: "Non — PV manquant", tone: "warn", go: "r_ir_voucher" },
       ],
     },
@@ -431,7 +439,7 @@ function pricingTree(lob, market) {
       q: "Le prix est-il validable (site, PV acceptable, ou LiveNation Tour Doc) ?",
       opts: [
         { t: "Oui — via le site", go: "q_metro_like" },
-        { t: "Oui — via un document PV", go: "pvv_start" },
+        { t: "Oui — via un document PV", go: "pvv_type" },
         { t: "Non validable / PV non conforme", tone: "ok", go: "r_glivepush" },
       ],
     },
@@ -449,7 +457,7 @@ function pricingTree(lob, market) {
     q_goods_pv: {
       q: "Un PV est-il attaché ET la Unit Value SF est-elle inférieure ou égale au prix du PV ?",
       opts: [
-        { t: "Oui — PV présent, Unit Value inférieure ou égale au PV", tone: "ok", go: "pvv_start" },
+        { t: "Oui — PV présent, Unit Value inférieure ou égale au PV", tone: "ok", go: "pvv_type" },
         { t: "PV manquant, ou Unit Value supérieure au prix du PV", tone: "warn", go: "r_ir_goods" },
       ],
     },
@@ -497,7 +505,7 @@ function pricingTree(lob, market) {
       q: "Y a-t-il un prix public sur le site du marchand, et correspond-il à SF ?",
       opts: [
         { t: "Oui — correspond (ou pas de PV requis ici)", tone: "ok", go: "r_pass" },
-        { t: "Site inférieur à SF (ou inférieur à l'amendement)", tone: "warn", go: "r_ir_local" },
+        { t: "Site inférieur à SF (ou inférieur au prix de l'amendement de prix signé)", tone: "warn", go: "r_ir_local" },
       ],
     },
     q_local_site: {
@@ -510,8 +518,8 @@ function pricingTree(lob, market) {
     q_local_compare: {
       q: "Le prix public correspond-il aux prix SF (et à l'amendement signé si « Signed with the contract ») ?",
       opts: [
-        { t: "Oui — tout correspond", tone: "ok", go: "pvv_start" },
-        { t: "Site inférieur à SF, OU inférieur à l'amendement", tone: "warn", go: "r_ir_local" },
+        { t: "Oui — tout correspond", tone: "ok", go: "pvv_type" },
+        { t: "Prix sur site inférieur à SF, OU inférieur au prix de l'amendement de prix signé", tone: "warn", go: "r_ir_local" },
       ],
     },
     r_ir_local: { result: { decision: "ir", tag: "—", internal: "Pricing NAM/CA Local : le prix public du site est inférieur aux prix SF (ou à l'amendement). IR obligatoire même si le champ Proof of Pricing dit « Signed with the contract ».", ecw: "Le prix affiché sur votre site est inférieur au prix saisi dans le deal. Merci d'aligner les prix ou de fournir un justificatif à jour.", action: "IR — discrepancy site/SF (même si « Signed with the contract »)." }},
@@ -684,7 +692,7 @@ function mclTree(lob) {
         opts: [
           { t: "Rien de spécifique dans la MCL", tone: "ok", go: "r_pass" },
           { t: "Terme légal obligatoire manquant", tone: "warn", go: "q_term" },
-          { t: "Licence / document requis par la MCL non fourni", tone: "warn", go: "q_doc" },
+          { t: "La MCL exige un document / une licence (diplôme, autorisation préfectorale…)", go: "q_doc" },
           { t: "Cas légal sensible / ambigu", tone: "danger", go: "r_legal" },
         ],
       },
@@ -697,18 +705,22 @@ function mclTree(lob) {
         ],
       },
       q_doc: {
-        q: "Qui détient le document requis par la MCL ?",
-        help: <>Si le marchand peut fournir le document → Follow-Up vers le marchand. Si le document est censé être détenu/transmis par <b>Sales</b> (ex. pièce contractuelle) → IR à Sales.</>,
+        q: "Le(s) document(s) exigé(s) par la MCL est-il (sont-ils) fourni(s) et valide(s) ?",
+        help: <>La MCL peut exiger un document précis (diplôme, autorisation préfectorale, agrément…). Vérifiez d'abord <b>s'il est joint au deal</b> et <b>valide</b> : il peut très bien l'être. Si oui, on continue. S'il est joint mais invalide/expiré/incorrect, ou s'il manque, on le signale.</>,
         opts: [
-          { t: "Le marchand doit le fournir", tone: "warn", go: "r_followdoc" },
-          { t: "Sales détient / doit transmettre le document", tone: "warn", go: "r_irdoc" },
+          { t: "Oui — document(s) fourni(s) et valide(s)", tone: "ok", go: "r_docok" },
+          { t: "Fourni mais invalide / expiré / incorrect", tone: "warn", go: "r_docinvalid" },
+          { t: "Non fourni — le marchand doit le fournir", tone: "warn", go: "r_followdoc" },
+          { t: "Non fourni — le Sales doit le transmettre", tone: "warn", go: "r_irdoc" },
         ],
       },
       r_pass: { result: { decision: "pass", tag: "—", internal: "MCL : aucune exigence supplémentaire pour ce PDS (licences et termes légaux OK). Conforme.", ecw: "", action: "Continuer." }},
+      r_docok: { result: { decision: "pass", tag: "—", internal: "MCL : document(s) exigé(s) fourni(s) et valide(s). Conforme.", ecw: "", action: "Continuer." }},
+      r_docinvalid: { result: { decision: "follow", tag: "Provided Licensing is not the Correct Licensing", internal: "MCL : document exigé fourni mais invalide / expiré / incorrect. Follow-Up.", ecw: "Le document fourni au titre des exigences réglementaires n'est pas valide (invalide, expiré ou incorrect). Merci de fournir une copie valide du document requis.", action: "Follow-Up — document MCL invalide (choisir le tag licence approprié)." }},
       r_addterm: { result: { decision: "pass", tag: "—", internal: "MCL : terme légal obligatoire manquant mais ajouté par l'agent (mention standard). Deal mis à jour, on continue.", ecw: "", action: "Ajouter la mention obligatoire au fine print, puis continuer." }},
       r_followterm: { result: { decision: "follow", tag: "Fine Print", internal: "MCL : terme légal obligatoire manquant nécessitant une info du marchand. Follow-Up « Fine Print ».", ecw: "Une mention légale obligatoire doit figurer dans votre deal. Merci de nous communiquer [information requise] afin que nous puissions l'ajouter au fine print.", action: "Follow-Up — Fine Print." }},
-      r_followdoc: { result: { decision: "follow", tag: "Required Licensing is Missing", internal: "MCL : licence/document requis par la MCL non fourni, à demander au marchand. Follow-Up.", ecw: "Un document complémentaire est requis pour valider ce deal. Merci de fournir [document requis par la MCL].", action: "Follow-Up — tag licence/document approprié." }},
-      r_irdoc: { result: { decision: "ir", tag: "Legal", internal: "MCL : document requis détenu/transmis par Sales. IR à Sales pour obtention du document.", ecw: "Un document complémentaire (détenu côté Sales) est requis pour valider ce deal.", action: "IR à Sales — document MCL." }},
+      r_followdoc: { result: { decision: "follow", tag: "Required Licensing is Missing", internal: "MCL : document/licence exigé non fourni, à demander au marchand. Follow-Up.", ecw: "Un document complémentaire est requis pour valider ce deal. Merci de fournir [document requis par la MCL].", action: "Follow-Up — tag licence/document approprié." }},
+      r_irdoc: { result: { decision: "ir", tag: "Legal", internal: "MCL : document exigé non fourni, détenu/transmis par Sales. IR à Sales.", ecw: "Un document complémentaire (détenu côté Sales) est requis pour valider ce deal.", action: "IR à Sales — document MCL." }},
       r_legal: { result: { decision: "escalate", tag: "Legal", internal: "MCL : cas légal sensible ou ambigu → escalade Legal (DNC List / PDS Config / formulaire). Ne pas trancher seul.", ecw: "", action: "Escalader à Legal (cas sensible MCL)." }},
     },
   };
@@ -719,12 +731,13 @@ function fraudTree(lob) {
   return {
     title: "Dépistage des fraudes (Gemini IA)",
     intro: "Couche de dépistage IA réalisée en DERNIER, après tous les autres contrôles. Elle n'aide qu'à repérer les marchands à revoir manuellement — elle ne rejette jamais un deal.",
-    sop: <>Étape <b>finale</b> du vetting, après site web, licences, contenu et prix. Ouvrir Gemini dans AI Hub, coller le prompt « Merchant Fraud Screening », renseigner nom / site / pays / titre du deal depuis Salesforce, puis lire la <b>première ligne</b> du résultat. L'IA <b>ne remplace pas</b> le vetting manuel et ne sert <b>jamais</b> à rejeter automatiquement.</>,
+    sop: <>Étape <b>finale</b> du vetting, après site web, licences, contenu et prix. Ouvrez le Gem « Merchant Fraud Screening » (bouton ci-dessous), renseignez nom / site / pays / titre du deal depuis Salesforce, puis lisez la <b>première ligne</b> du résultat. L'IA <b>ne remplace pas</b> le vetting manuel et ne sert <b>jamais</b> à rejeter automatiquement.</>,
     start: "q_fraud",
     nodes: {
       q_fraud: {
         q: "Quel est le résultat renvoyé par Gemini (première ligne) ?",
-        help: <>Lance le prompt dans Gemini (AI Hub) avec : nom du marchand, site, pays, titre du deal. Le résultat commence <b>toujours</b> par l'une de deux lignes : « NO MAJOR FRAUD INDICATORS DETECTED » ou « MANUAL REVIEW REQUIRED ». On ne se fie qu'à cette ligne d'en-tête. Important : ne jamais rejeter un deal sur la seule base de l'IA.</>,
+        link: { url: "https://gemini.google.com/gem/33dcc80790e2", label: "Ouvrir le Gem Merchant Fraud Screening" },
+        help: <>Ouvrez le Gem (bouton ci-dessus) et renseignez : nom du marchand, site, pays, titre du deal. Le résultat commence <b>toujours</b> par l'une de deux lignes : « NO MAJOR FRAUD INDICATORS DETECTED » ou « MANUAL REVIEW REQUIRED ». On ne se fie qu'à cette ligne d'en-tête. Important : ne jamais rejeter un deal sur la seule base de l'IA.</>,
         opts: [
           { t: "NO MAJOR FRAUD INDICATORS DETECTED", tone: "ok", go: "r_clear" },
           { t: "MANUAL REVIEW REQUIRED", tone: "warn", go: "r_review" },
@@ -813,15 +826,15 @@ function goodsTree() {
 function buildChecks(lob, market) {
   const a = APPLIES[lob];
   const checks = [];
-  // Ordre = trame Local/Metro : DAC7 → PDS Eligibility → Licences → Localisation
-  //         → Pricing → MCL → Site web → Gemini (fraude). Les LoB hors Local/Metro
+  // Ordre = trame Local/Metro : DAC7 → PDS Eligibility → Licences → MCL → Localisation
+  //         → Pricing → Site web → Goods → Gemini (fraude). Les LoB hors Local/Metro
   //         n'activent que les contrôles qui les concernent (voir APPLIES).
   if (a.dac7) checks.push({ key: "dac7", tree: dac7Tree(lob) });
   if (a.pdselig) checks.push({ key: "pdselig", tree: pdseligTree() });
   if (a.licensing) checks.push({ key: "licensing", tree: licensingTree(lob) });
+  if (a.mcl) checks.push({ key: "mcl", tree: mclTree(lob) });
   if (a.location) checks.push({ key: "location", tree: locationTree(lob) });
   if (a.pricing) checks.push({ key: "pricing", tree: pricingTree(lob, market) });
-  if (a.mcl) checks.push({ key: "mcl", tree: mclTree(lob) });
   if (a.website) checks.push({ key: "website", tree: websiteTree() });
   if (a.goods) checks.push({ key: "goods", tree: goodsTree() });
   if (a.fraud) checks.push({ key: "fraud", tree: fraudTree(lob) });
@@ -957,6 +970,18 @@ function CheckRunner({ tree, market, onDone }) {
       ) : (
         <div style={{ marginTop: 22 }}>
           <QuestionWithHelp q={node.q} help={node.help} />
+          {node.link && (
+            <a
+              href={node.link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 8, marginTop: 12,
+                background: C.navy, color: "#fff", textDecoration: "none",
+                borderRadius: 9, padding: "11px 18px", fontSize: 14, fontWeight: 700,
+              }}
+            >🔗 {node.link.label} <span style={{ opacity: 0.7, fontSize: 12.5 }}>(nouvel onglet)</span></a>
+          )}
           {node.opts.map((o, i) => (
             <Choice key={i} tone={o.tone} onClick={() => pick(o)}>
               {o.t}
